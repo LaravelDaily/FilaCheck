@@ -1,0 +1,137 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Filacheck\Reporting\StandaloneReporter;
+use Filacheck\Rules\DeprecatedActionFormRule;
+use Filacheck\Rules\DeprecatedEmptyLabelRule;
+use Filacheck\Rules\DeprecatedFilterFormRule;
+use Filacheck\Rules\DeprecatedMutateFormDataUsingRule;
+use Filacheck\Rules\DeprecatedPlaceholderRule;
+use Filacheck\Rules\DeprecatedReactiveRule;
+use Filacheck\Rules\LargeOptionListSearchableRule;
+use Filacheck\Rules\SelectRelationshipPreloadRule;
+use Filacheck\Rules\StringIconInsteadOfEnumRule;
+use Filacheck\Rules\TableDeferLoadingRule;
+use Filacheck\Rules\TableMissingEagerLoadingRule;
+use Filacheck\Rules\TooManyColumnsRule;
+use Filacheck\Rules\UnnecessaryUniqueIgnoreRecordRule;
+use Filacheck\Scanner\ResourceScanner;
+use Symfony\Component\Console\Output\ConsoleOutput;
+
+// Autoload handling for different installation contexts
+$autoloadPaths = [
+    __DIR__.'/../vendor/autoload.php',           // Package development
+    __DIR__.'/../../../autoload.php',            // Installed as dependency
+    __DIR__.'/../../../../vendor/autoload.php',  // Laravel project context
+];
+
+$autoloaded = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require $autoloadPath;
+        $autoloaded = true;
+        break;
+    }
+}
+
+if (! $autoloaded) {
+    fwrite(STDERR, "Error: Could not find autoloader. Run 'composer install' first.\n");
+    exit(1);
+}
+
+$version = '0.1.0';
+$output = new ConsoleOutput();
+
+// Parse arguments
+$args = array_slice($argv, 1);
+$path = null;
+$verbose = false;
+$showHelp = false;
+$showVersion = false;
+
+foreach ($args as $arg) {
+    if ($arg === '--help' || $arg === '-h') {
+        $showHelp = true;
+    } elseif ($arg === '--version' || $arg === '-V') {
+        $showVersion = true;
+    } elseif ($arg === '--detailed' || $arg === '-d') {
+        $verbose = true;
+    } elseif (! str_starts_with($arg, '-')) {
+        $path = $arg;
+    }
+}
+
+if ($showVersion) {
+    $output->writeln("FilaCheck <info>v{$version}</info>");
+    exit(0);
+}
+
+if ($showHelp) {
+    $output->writeln("FilaCheck <info>v{$version}</info>");
+    $output->writeln('');
+    $output->writeln('<fg=yellow>Usage:</>');
+    $output->writeln('  filacheck [path] [options]');
+    $output->writeln('');
+    $output->writeln('<fg=yellow>Arguments:</>');
+    $output->writeln('  path                  Directory to scan (default: app/Filament)');
+    $output->writeln('');
+    $output->writeln('<fg=yellow>Options:</>');
+    $output->writeln('  -d, --detailed        Show detailed output with rule categories');
+    $output->writeln('  -h, --help            Display this help message');
+    $output->writeln('  -V, --version         Display version');
+    $output->writeln('');
+    $output->writeln('<fg=yellow>Examples:</>');
+    $output->writeln('  filacheck                           Scan app/Filament directory');
+    $output->writeln('  filacheck app/Filament/Resources    Scan specific directory');
+    $output->writeln('  filacheck --detailed                Show detailed report');
+    exit(0);
+}
+
+// Default path
+if ($path === null) {
+    $path = getcwd().'/app/Filament';
+}
+
+// Make relative paths absolute
+if (! str_starts_with($path, '/')) {
+    $path = getcwd().'/'.$path;
+}
+
+if (! is_dir($path)) {
+    $output->writeln("<fg=red>Error:</> Directory not found: {$path}");
+    exit(1);
+}
+
+$output->writeln("FilaCheck <info>v{$version}</info>");
+$output->writeln("Scanning: <fg=gray>{$path}</>");
+$output->writeln('');
+
+$scanner = new ResourceScanner();
+
+// Deprecated Code rules
+$scanner->addRule(new DeprecatedReactiveRule());
+$scanner->addRule(new DeprecatedActionFormRule());
+$scanner->addRule(new DeprecatedFilterFormRule());
+$scanner->addRule(new DeprecatedPlaceholderRule());
+$scanner->addRule(new DeprecatedMutateFormDataUsingRule());
+$scanner->addRule(new DeprecatedEmptyLabelRule());
+
+// Performance rules
+$scanner->addRule(new TooManyColumnsRule());
+$scanner->addRule(new SelectRelationshipPreloadRule());
+$scanner->addRule(new TableDeferLoadingRule());
+$scanner->addRule(new TableMissingEagerLoadingRule());
+$scanner->addRule(new LargeOptionListSearchableRule());
+
+// Best Practices rules
+$scanner->addRule(new StringIconInsteadOfEnumRule());
+$scanner->addRule(new UnnecessaryUniqueIgnoreRecordRule());
+
+$violations = $scanner->scan($path);
+
+$reporter = new StandaloneReporter($output, $verbose);
+$reporter->report($scanner->getRules(), $violations);
+
+exit(count($violations) > 0 ? 1 : 0);

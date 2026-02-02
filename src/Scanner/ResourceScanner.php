@@ -1,0 +1,135 @@
+<?php
+
+namespace Filacheck\Scanner;
+
+use Filacheck\Rules\Rule;
+use Filacheck\Support\Context;
+use Filacheck\Support\Violation;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitor\NameResolver;
+use PhpParser\NodeVisitorAbstract;
+use PhpParser\Parser;
+use PhpParser\ParserFactory;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
+
+class ResourceScanner
+{
+    private Parser $parser;
+
+    /** @var Rule[] */
+    private array $rules = [];
+
+    public function __construct()
+    {
+        $this->parser = (new ParserFactory)->createForNewestSupportedVersion();
+    }
+
+    public function addRule(Rule $rule): self
+    {
+        $this->rules[] = $rule;
+
+        return $this;
+    }
+
+    /**
+     * @return Rule[]
+     */
+    public function getRules(): array
+    {
+        return $this->rules;
+    }
+
+    /**
+     * @return Violation[]
+     */
+    public function scan(string $directory): array
+    {
+        $violations = [];
+        $files = $this->findPhpFiles($directory);
+
+        foreach ($files as $file) {
+            $fileViolations = $this->scanFile($file);
+            $violations = array_merge($violations, $fileViolations);
+        }
+
+        return $violations;
+    }
+
+    /**
+     * @return SplFileInfo[]
+     */
+    private function findPhpFiles(string $directory): array
+    {
+        if (! is_dir($directory)) {
+            return [];
+        }
+
+        $files = [];
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($directory)
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                $files[] = $file;
+            }
+        }
+
+        return $files;
+    }
+
+    /**
+     * @return Violation[]
+     */
+    private function scanFile(SplFileInfo $file): array
+    {
+        $code = file_get_contents($file->getPathname());
+        $context = new Context(
+            file: $file->getPathname(),
+            code: $code,
+        );
+
+        try {
+            $ast = $this->parser->parse($code);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if ($ast === null) {
+            return [];
+        }
+
+        $violations = [];
+        $rules = $this->rules;
+
+        $traverser = new NodeTraverser;
+        $traverser->addVisitor(new NameResolver);
+        $traverser->addVisitor(new class($rules, $context, $violations) extends NodeVisitorAbstract
+        {
+            public function __construct(
+                private array $rules,
+                private Context $context,
+                private array &$violations,
+            ) {}
+
+            public function enterNode(\PhpParser\Node $node): ?int
+            {
+                foreach ($this->rules as $rule) {
+                    $ruleViolations = $rule->check($node, $this->context);
+                    foreach ($ruleViolations as $violation) {
+                        $violation->rule = $rule->name();
+                    }
+                    $this->violations = array_merge($this->violations, $ruleViolations);
+                }
+
+                return null;
+            }
+        });
+
+        $traverser->traverse($ast);
+
+        return $violations;
+    }
+}

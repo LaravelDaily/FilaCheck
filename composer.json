@@ -1,0 +1,51 @@
+{
+    "name": "laraveldaily/filacheck",
+    "description": "Static analysis for Filament projects - detect deprecated patterns and code issues",
+    "keywords": ["filament", "static-analysis", "lint", "laravel", "livewire", "code-quality"],
+    "homepage": "https://github.com/LaravelDaily/filacheck",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Povilas Korop",
+            "email": "povilas@laraveldaily.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "filament/filament": "^4.0|^5.0",
+        "nikic/php-parser": "^5.0",
+        "symfony/console": "^6.0|^7.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.0",
+        "orchestra/testbench": "^9.0|^10.0"
+    },
+    "bin": ["bin/filacheck"],
+    "autoload": {
+        "psr-4": {
+            "Filacheck\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Filacheck\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Filacheck\\FilacheckServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "suggest": {
+        "laraveldaily/filacheck-pro": "Unlock performance rules, best practices checks, and more advanced static analysis"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
