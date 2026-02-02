@@ -10,13 +10,6 @@ use Filacheck\Rules\DeprecatedFilterFormRule;
 use Filacheck\Rules\DeprecatedMutateFormDataUsingRule;
 use Filacheck\Rules\DeprecatedPlaceholderRule;
 use Filacheck\Rules\DeprecatedReactiveRule;
-use Filacheck\Rules\LargeOptionListSearchableRule;
-use Filacheck\Rules\SelectRelationshipPreloadRule;
-use Filacheck\Rules\StringIconInsteadOfEnumRule;
-use Filacheck\Rules\TableDeferLoadingRule;
-use Filacheck\Rules\TableMissingEagerLoadingRule;
-use Filacheck\Rules\TooManyColumnsRule;
-use Filacheck\Rules\UnnecessaryUniqueIgnoreRecordRule;
 use Filacheck\Scanner\ResourceScanner;
 use Symfony\Component\Console\Output\ConsoleOutput;
 
@@ -117,17 +110,6 @@ $scanner->addRule(new DeprecatedFilterFormRule());
 $scanner->addRule(new DeprecatedPlaceholderRule());
 $scanner->addRule(new DeprecatedMutateFormDataUsingRule());
 $scanner->addRule(new DeprecatedEmptyLabelRule());
-
-// Performance rules
-$scanner->addRule(new TooManyColumnsRule());
-$scanner->addRule(new SelectRelationshipPreloadRule());
-$scanner->addRule(new TableDeferLoadingRule());
-$scanner->addRule(new TableMissingEagerLoadingRule());
-$scanner->addRule(new LargeOptionListSearchableRule());
-
-// Best Practices rules
-$scanner->addRule(new StringIconInsteadOfEnumRule());
-$scanner->addRule(new UnnecessaryUniqueIgnoreRecordRule());
 
 $violations = $scanner->scan($path);
 
