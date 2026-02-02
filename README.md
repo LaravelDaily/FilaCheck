@@ -37,7 +37,7 @@ php artisan filacheck app/Filament/Resources
 php artisan filacheck --detailed
 ```
 
-### Auto-fixing Issues
+### Auto-fixing Issues (Beta)
 
 FilaCheck can automatically fix many issues it detects:
 
@@ -48,6 +48,8 @@ vendor/bin/filacheck --fix
 # Fix with backup files (creates .bak files before modifying)
 vendor/bin/filacheck --fix --backup
 ```
+
+> **Warning:** The auto-fix feature is in early stages. Always ensure your code is committed to version control (e.g., Git/GitHub) before running `--fix` so you can easily review and revert changes if needed.
 
 ## Exit Codes
 
