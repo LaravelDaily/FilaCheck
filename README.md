@@ -51,12 +51,7 @@ vendor/bin/filacheck --fix --backup
 
 > **Warning:** The auto-fix feature is in early stages. Always ensure your code is committed to version control (e.g., Git/GitHub) before running `--fix` so you can easily review and revert changes if needed.
 
-## Exit Codes
-
-- `0` - No violations found
-- `1` - Violations found
-
-This makes FilaCheck perfect for CI pipelines.
+---
 
 ## Available Rules
 
@@ -96,6 +91,15 @@ deprecated-action-form (Deprecated Code)
 Rules: 4 passed, 2 failed
 Issues: 2 warning(s)
 ```
+
+---
+
+## Exit Codes
+
+- `0` - No violations found
+- `1` - Violations found
+
+This makes FilaCheck perfect for CI pipelines.
 
 ---
 
