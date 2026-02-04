@@ -7,7 +7,9 @@ use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
 use PhpParser\Node\Scalar\String_;
 
 class DeprecatedEmptyLabelRule implements FixableRule
@@ -50,6 +52,11 @@ class DeprecatedEmptyLabelRule implements FixableRule
             return [];
         }
 
+        // Skip Table Columns - they don't have hiddenLabel() method
+        if ($this->isTableColumn($node)) {
+            return [];
+        }
+
         // Replace the entire method call: ->label('') becomes ->hiddenLabel()
         $nameNode = $node->name;
         $startPos = $nameNode->getStartFilePos();
@@ -69,5 +76,48 @@ class DeprecatedEmptyLabelRule implements FixableRule
                 replacement: 'hiddenLabel()',
             ),
         ];
+    }
+
+    /**
+     * Check if the method chain originates from a Table Column class.
+     */
+    private function isTableColumn(MethodCall $node): bool
+    {
+        $rootClass = $this->getRootClassName($node);
+
+        if ($rootClass === null) {
+            return false;
+        }
+
+        // Check if the class name ends with "Column" (e.g., TextColumn, IconColumn)
+        // or is in the Filament\Tables\Columns namespace
+        $shortName = $this->classBasename($rootClass);
+
+        return str_ends_with($shortName, 'Column');
+    }
+
+    /**
+     * Traverse up the method chain to find the root static call class name.
+     */
+    private function getRootClassName(Node $node): ?string
+    {
+        $current = $node;
+
+        while ($current instanceof MethodCall) {
+            $current = $current->var;
+        }
+
+        if ($current instanceof StaticCall && $current->class instanceof Name) {
+            return $current->class->toString();
+        }
+
+        return null;
+    }
+
+    private function classBasename(string $class): string
+    {
+        $parts = explode('\\', $class);
+
+        return end($parts);
     }
 }

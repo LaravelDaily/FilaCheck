@@ -136,3 +136,69 @@ PHP;
     expect($fixedCode)->toContain('->hiddenLabel()');
     expect($fixedCode)->not->toContain("->label('')");
 });
+
+it('skips table columns with empty label', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Tables\Columns\IconColumn;
+
+class TestResource
+{
+    public function table(): array
+    {
+        return [
+            IconColumn::make('status')->label(''),
+        ];
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedEmptyLabelRule, $code);
+
+    $this->assertNoViolations($violations);
+});
+
+it('skips TextColumn with empty label', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Tables\Columns\TextColumn;
+
+class TestResource
+{
+    public function table(): array
+    {
+        return [
+            TextColumn::make('name')->sortable()->label(''),
+        ];
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedEmptyLabelRule, $code);
+
+    $this->assertNoViolations($violations);
+});
+
+it('still detects empty label on infolist entries', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Infolists\Components\TextEntry;
+
+class TestResource
+{
+    public function infolist(): array
+    {
+        return [
+            TextEntry::make('name')->label(''),
+        ];
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedEmptyLabelRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+});
