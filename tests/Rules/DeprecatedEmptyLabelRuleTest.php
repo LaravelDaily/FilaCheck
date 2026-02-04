@@ -202,3 +202,75 @@ PHP;
 
     $this->assertViolationCount(1, $violations);
 });
+
+it('suggests iconButton for Action with empty label', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Actions\Action;
+
+class TestResource
+{
+    public function getActions(): array
+    {
+        return [
+            Action::make('edit')
+                ->icon('heroicon-m-pencil')
+                ->label(''),
+        ];
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedEmptyLabelRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+    expect($violations[0]->suggestion)->toContain('iconButton()');
+});
+
+it('suggests iconButton for EditAction with empty label', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Tables\Actions\EditAction;
+
+class TestResource
+{
+    public function table(): array
+    {
+        return [
+            EditAction::make()->label(''),
+        ];
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedEmptyLabelRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+    expect($violations[0]->suggestion)->toContain('iconButton()');
+});
+
+it('fixes Action empty label to iconButton', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Actions\Action;
+
+class TestResource
+{
+    public function getActions(): array
+    {
+        return [
+            Action::make('edit')->icon('heroicon-m-pencil')->label(''),
+        ];
+    }
+}
+PHP;
+
+    $fixedCode = $this->scanAndFix(new DeprecatedEmptyLabelRule, $code);
+
+    expect($fixedCode)->toContain('->iconButton()');
+    expect($fixedCode)->not->toContain("->label('')");
+    expect($fixedCode)->not->toContain('->hiddenLabel()');
+});

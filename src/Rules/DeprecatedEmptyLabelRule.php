@@ -57,11 +57,28 @@ class DeprecatedEmptyLabelRule implements FixableRule
             return [];
         }
 
-        // Replace the entire method call: ->label('') becomes ->hiddenLabel()
+        // Replace the entire method call: ->label('') becomes ->hiddenLabel() or ->iconButton()
         $nameNode = $node->name;
         $startPos = $nameNode->getStartFilePos();
         // End position includes the closing parenthesis
         $endPos = $node->getEndFilePos() + 1;
+
+        // Use iconButton() for Actions, hiddenLabel() for everything else
+        if ($this->isAction($node)) {
+            return [
+                new Violation(
+                    level: 'warning',
+                    message: 'Using `label(\'\')` to hide labels is deprecated.',
+                    file: $context->file,
+                    line: $node->getLine(),
+                    suggestion: 'Use `iconButton()` instead of `label(\'\')` for Actions.',
+                    isFixable: true,
+                    startPos: $startPos,
+                    endPos: $endPos,
+                    replacement: 'iconButton()',
+                ),
+            ];
+        }
 
         return [
             new Violation(
@@ -90,10 +107,26 @@ class DeprecatedEmptyLabelRule implements FixableRule
         }
 
         // Check if the class name ends with "Column" (e.g., TextColumn, IconColumn)
-        // or is in the Filament\Tables\Columns namespace
         $shortName = $this->classBasename($rootClass);
 
         return str_ends_with($shortName, 'Column');
+    }
+
+    /**
+     * Check if the method chain originates from an Action class.
+     */
+    private function isAction(MethodCall $node): bool
+    {
+        $rootClass = $this->getRootClassName($node);
+
+        if ($rootClass === null) {
+            return false;
+        }
+
+        // Check if the class name ends with "Action" (e.g., Action, EditAction, DeleteAction)
+        $shortName = $this->classBasename($rootClass);
+
+        return str_ends_with($shortName, 'Action');
     }
 
     /**
