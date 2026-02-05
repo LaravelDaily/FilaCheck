@@ -14,6 +14,7 @@ use Filacheck\Rules\DeprecatedMutateFormDataUsingRule;
 use Filacheck\Rules\DeprecatedPlaceholderRule;
 use Filacheck\Rules\DeprecatedReactiveRule;
 use Filacheck\Scanner\ResourceScanner;
+use Filacheck\Support\RuleRegistry;
 use Symfony\Component\Console\Output\ConsoleOutput;
 
 // Autoload handling for different installation contexts
@@ -116,15 +117,29 @@ $output->writeln('');
 
 $scanner = new ResourceScanner();
 
-// Deprecated Code rules
-$scanner->addRule(new DeprecatedReactiveRule());
-$scanner->addRule(new DeprecatedActionFormRule());
-$scanner->addRule(new DeprecatedFilterFormRule());
-$scanner->addRule(new DeprecatedPlaceholderRule());
-$scanner->addRule(new DeprecatedMutateFormDataUsingRule());
-$scanner->addRule(new DeprecatedEmptyLabelRule());
-$scanner->addRule(new DeprecatedFormsSetRule());
-$scanner->addRule(new DeprecatedImageColumnSizeRule());
+$registry = new RuleRegistry();
+
+// Free rules
+$registry->register([
+    DeprecatedReactiveRule::class,
+    DeprecatedActionFormRule::class,
+    DeprecatedFilterFormRule::class,
+    DeprecatedPlaceholderRule::class,
+    DeprecatedMutateFormDataUsingRule::class,
+    DeprecatedEmptyLabelRule::class,
+    DeprecatedFormsSetRule::class,
+    DeprecatedImageColumnSizeRule::class,
+]);
+
+// Pro rules (auto-detected if installed)
+$proProvider = 'FilacheckPro\\FilacheckProServiceProvider';
+if (class_exists($proProvider)) {
+    $registry->register($proProvider::rules());
+}
+
+foreach ($registry->all() as $rule) {
+    $scanner->addRule($rule);
+}
 
 $violations = $scanner->scan($path);
 
