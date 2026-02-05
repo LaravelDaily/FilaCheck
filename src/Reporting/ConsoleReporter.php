@@ -299,18 +299,10 @@ class ConsoleReporter
 
         $this->command->newLine(2);
 
-        if (count($fixedRules) > 0) {
-            $this->command->line('<fg=cyan;options=bold>Fixed:</>');
-            foreach ($fixedRules as $ruleName => $data) {
-                $count = count($data['violations']);
-                $this->command->line("  <fg=cyan>✓</> {$ruleName} <fg=gray>({$count} fixed)</>");
-            }
-            $this->command->newLine();
-        }
+        $allFailedRules = $fixedRules + $unfixedRules;
 
-        if (count($unfixedRules) > 0) {
-            $this->command->line('<fg=yellow;options=bold>Remaining issues:</>');
-            foreach ($unfixedRules as $ruleName => $data) {
+        if (count($allFailedRules) > 0) {
+            foreach ($allFailedRules as $ruleName => $data) {
                 $this->reportFailedRuleWithFixInfo($ruleName, $data['rule'], $data['violations']);
             }
         }
@@ -323,37 +315,52 @@ class ConsoleReporter
      */
     private function reportFailedRuleWithFixInfo(string $ruleName, Rule $rule, array $violations): void
     {
-        $fixable = array_filter($violations, fn ($v) => $v->isFixable);
-        $unfixable = array_filter($violations, fn ($v) => ! $v->isFixable);
+        $fixableCount = count(array_filter($violations, fn ($v) => $v->isFixable));
+        $unfixableCount = count($violations) - $fixableCount;
+        $categoryLabel = $rule->category()->label();
 
-        $fixedCount = count($fixable);
-        $unfixedCount = count($unfixable);
+        if ($fixableCount > 0 && $unfixableCount === 0) {
+            $icon = '<fg=cyan>✓</>';
+            $status = ' <fg=cyan>(fixed)</>';
+        } elseif ($fixableCount > 0) {
+            $icon = '<fg=yellow>!</>';
+            $status = ' <fg=yellow>(partial fix)</>';
+        } else {
+            $icon = '<fg=red>✗</>';
+            $status = ' <fg=red>(not fixable)</>';
+        }
 
-        $status = $unfixedCount > 0
-            ? ($fixedCount > 0 ? '<fg=yellow>partial</>' : '<fg=red>not fixable</>')
-            : '<fg=cyan>fixed</>';
+        $this->command->line("{$icon} <options=bold>{$ruleName}</> <fg=gray>({$categoryLabel})</>{$status}");
 
-        $this->command->line("  <fg=yellow>!</> {$ruleName} ({$status})");
+        $groupedByFile = [];
+        foreach ($violations as $violation) {
+            $groupedByFile[$violation->file][] = $violation;
+        }
 
-        if ($unfixedCount > 0) {
-            $groupedByFile = [];
-            foreach ($unfixable as $violation) {
-                $groupedByFile[$violation->file][] = $violation;
-            }
+        foreach ($groupedByFile as $file => $fileViolations) {
+            $this->command->line("  <fg=gray>{$file}</>");
 
-            foreach ($groupedByFile as $file => $fileViolations) {
-                $this->command->line("    <fg=gray>{$file}</>");
-
-                foreach ($fileViolations as $violation) {
+            foreach ($fileViolations as $violation) {
+                if ($violation->isFixable) {
                     $this->command->line(
-                        "      <fg=yellow>Line {$violation->line}:</> {$violation->message} <fg=gray>(manual fix required)</>"
+                        "    <fg=cyan>Line {$violation->line}:</> {$violation->message} <fg=cyan>(fixed)</>"
                     );
+                } else {
+                    $levelColor = match ($violation->level) {
+                        'error' => 'red',
+                        'warning' => 'yellow',
+                        default => 'white',
+                    };
 
-                    if ($violation->suggestion) {
-                        $this->command->line(
-                            "        <fg=gray>→ {$violation->suggestion}</>"
-                        );
-                    }
+                    $this->command->line(
+                        "    <fg={$levelColor}>Line {$violation->line}:</> {$violation->message} <fg=yellow>(manual fix required)</>"
+                    );
+                }
+
+                if ($violation->suggestion) {
+                    $this->command->line(
+                        "      <fg=gray>→ {$violation->suggestion}</>"
+                    );
                 }
             }
         }

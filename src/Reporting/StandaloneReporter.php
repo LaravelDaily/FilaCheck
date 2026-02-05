@@ -191,57 +191,80 @@ class StandaloneReporter
         $this->output->writeln('');
         $this->output->writeln('');
 
-        if (count($fixedRules) > 0) {
-            $this->output->writeln('<fg=cyan;options=bold>Fixed:</>');
-            foreach ($fixedRules as $ruleName => $data) {
-                $count = count($data['violations']);
-                $this->output->writeln("  <fg=cyan>✓</> {$ruleName} <fg=gray>({$count} fixed)</>");
+        $allFailedRules = $fixedRules + $unfixedRules;
+
+        if (count($allFailedRules) > 0) {
+            foreach ($allFailedRules as $ruleName => $data) {
+                $this->reportFailedRuleWithFixInfo($ruleName, $data['rule'], $data['violations']);
             }
-            $this->output->writeln('');
         }
 
-        if (count($unfixedRules) > 0) {
-            $this->output->writeln('<fg=yellow;options=bold>Remaining issues:</>');
-            foreach ($unfixedRules as $ruleName => $data) {
-                $fixable = array_filter($data['violations'], fn ($v) => $v->isFixable);
-                $unfixable = array_filter($data['violations'], fn ($v) => ! $v->isFixable);
+        $this->reportFixSummary($fixResults, $passCount, count($rules));
+    }
 
-                $fixedCount = count($fixable);
-                $unfixedCount = count($unfixable);
+    /**
+     * @param  Violation[]  $violations
+     */
+    private function reportFailedRuleWithFixInfo(string $ruleName, Rule $rule, array $violations): void
+    {
+        $fixableCount = count(array_filter($violations, fn ($v) => $v->isFixable));
+        $unfixableCount = count($violations) - $fixableCount;
+        $categoryLabel = $rule->category()->label();
 
-                $status = $unfixedCount > 0
-                    ? ($fixedCount > 0 ? '<fg=yellow>partial</>' : '<fg=red>not fixable</>')
-                    : '<fg=cyan>fixed</>';
+        if ($fixableCount > 0 && $unfixableCount === 0) {
+            $icon = '<fg=cyan>✓</>';
+            $status = ' <fg=cyan>(fixed)</>';
+        } elseif ($fixableCount > 0) {
+            $icon = '<fg=yellow>!</>';
+            $status = ' <fg=yellow>(partial fix)</>';
+        } else {
+            $icon = '<fg=red>✗</>';
+            $status = ' <fg=red>(not fixable)</>';
+        }
 
-                $this->output->writeln("  <fg=yellow>!</> {$ruleName} ({$status})");
+        $this->output->writeln("{$icon} <options=bold>{$ruleName}</> <fg=gray>({$categoryLabel})</>{$status}");
 
-                if ($unfixedCount > 0) {
-                    $groupedByFile = [];
-                    foreach ($unfixable as $violation) {
-                        $groupedByFile[$violation->file][] = $violation;
-                    }
+        $groupedByFile = [];
+        foreach ($violations as $violation) {
+            $groupedByFile[$violation->file][] = $violation;
+        }
 
-                    foreach ($groupedByFile as $file => $fileViolations) {
-                        $this->output->writeln("    <fg=gray>{$file}</>");
+        foreach ($groupedByFile as $file => $fileViolations) {
+            $this->output->writeln("  <fg=gray>{$file}</>");
 
-                        foreach ($fileViolations as $violation) {
-                            $this->output->writeln(
-                                "      <fg=yellow>Line {$violation->line}:</> {$violation->message} <fg=gray>(manual fix required)</>"
-                            );
+            foreach ($fileViolations as $violation) {
+                if ($violation->isFixable) {
+                    $this->output->writeln(
+                        "    <fg=cyan>Line {$violation->line}:</> {$violation->message} <fg=cyan>(fixed)</>"
+                    );
+                } else {
+                    $levelColor = match ($violation->level) {
+                        'error' => 'red',
+                        'warning' => 'yellow',
+                        default => 'white',
+                    };
 
-                            if ($violation->suggestion) {
-                                $this->output->writeln(
-                                    "        <fg=gray>→ {$violation->suggestion}</>"
-                                );
-                            }
-                        }
-                    }
+                    $this->output->writeln(
+                        "    <fg={$levelColor}>Line {$violation->line}:</> {$violation->message} <fg=yellow>(manual fix required)</>"
+                    );
                 }
 
-                $this->output->writeln('');
+                if ($violation->suggestion) {
+                    $this->output->writeln(
+                        "      <fg=gray>→ {$violation->suggestion}</>"
+                    );
+                }
             }
         }
 
+        $this->output->writeln('');
+    }
+
+    /**
+     * @param  array{fixed: int, skipped: int, byFile: array<string, array{fixed: int, skipped: int}>}  $fixResults
+     */
+    private function reportFixSummary(array $fixResults, int $passCount, int $totalRules): void
+    {
         $fixed = $fixResults['fixed'];
         $skipped = $fixResults['skipped'];
         $filesModified = count(array_filter($fixResults['byFile'], fn ($r) => $r['fixed'] > 0));
