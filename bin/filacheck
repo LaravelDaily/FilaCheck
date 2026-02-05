@@ -34,7 +34,7 @@ if (! $autoloaded) {
     exit(1);
 }
 
-$version = '0.1.0';
+$version = trim(shell_exec('git describe --tags --abbrev=0 2>/dev/null') ?? '') ?: 'dev';
 $output = new ConsoleOutput();
 
 // Parse arguments
@@ -57,12 +57,12 @@ foreach ($args as $arg) {
 }
 
 if ($showVersion) {
-    $output->writeln("FilaCheck <info>v{$version}</info>");
+    $output->writeln("FilaCheck <info>{$version}</info>");
     exit(0);
 }
 
 if ($showHelp) {
-    $output->writeln("FilaCheck <info>v{$version}</info>");
+    $output->writeln("FilaCheck <info>{$version}</info>");
     $output->writeln('');
     $output->writeln('<fg=yellow>Usage:</>');
     $output->writeln('  filacheck [path] [options]');
@@ -97,7 +97,7 @@ if (! is_dir($path)) {
     exit(1);
 }
 
-$output->writeln("FilaCheck <info>v{$version}</info>");
+$output->writeln("FilaCheck <info>{$version}</info>");
 $output->writeln("Scanning: <fg=gray>{$path}</>");
 $output->writeln('');
 
