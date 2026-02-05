@@ -142,6 +142,128 @@ class StandaloneReporter
     /**
      * @param  Rule[]  $rules
      * @param  Violation[]  $violations
+     * @param  array{fixed: int, skipped: int, byFile: array<string, array{fixed: int, skipped: int}>}  $fixResults
+     */
+    public function reportWithFixes(array $rules, array $violations, array $fixResults): void
+    {
+        $violationsByRule = [];
+        foreach ($violations as $violation) {
+            $violationsByRule[$violation->rule][] = $violation;
+        }
+
+        $fixedRules = [];
+        $unfixedRules = [];
+        $passCount = 0;
+
+        foreach ($rules as $rule) {
+            $ruleName = $rule->name();
+            $ruleViolations = $violationsByRule[$ruleName] ?? [];
+
+            if (count($ruleViolations) === 0) {
+                $this->output->write('<fg=green>.</>');
+                $passCount++;
+            } else {
+                $fixableCount = count(array_filter($ruleViolations, fn ($v) => $v->isFixable));
+                $unfixableCount = count($ruleViolations) - $fixableCount;
+
+                if ($fixableCount > 0 && $unfixableCount === 0) {
+                    $this->output->write('<fg=cyan>F</>');
+                    $fixedRules[$ruleName] = [
+                        'rule' => $rule,
+                        'violations' => $ruleViolations,
+                    ];
+                } elseif ($fixableCount > 0) {
+                    $this->output->write('<fg=yellow>P</>');
+                    $unfixedRules[$ruleName] = [
+                        'rule' => $rule,
+                        'violations' => $ruleViolations,
+                    ];
+                } else {
+                    $this->output->write('<fg=red>x</>');
+                    $unfixedRules[$ruleName] = [
+                        'rule' => $rule,
+                        'violations' => $ruleViolations,
+                    ];
+                }
+            }
+        }
+
+        $this->output->writeln('');
+        $this->output->writeln('');
+
+        if (count($fixedRules) > 0) {
+            $this->output->writeln('<fg=cyan;options=bold>Fixed:</>');
+            foreach ($fixedRules as $ruleName => $data) {
+                $count = count($data['violations']);
+                $this->output->writeln("  <fg=cyan>✓</> {$ruleName} <fg=gray>({$count} fixed)</>");
+            }
+            $this->output->writeln('');
+        }
+
+        if (count($unfixedRules) > 0) {
+            $this->output->writeln('<fg=yellow;options=bold>Remaining issues:</>');
+            foreach ($unfixedRules as $ruleName => $data) {
+                $fixable = array_filter($data['violations'], fn ($v) => $v->isFixable);
+                $unfixable = array_filter($data['violations'], fn ($v) => ! $v->isFixable);
+
+                $fixedCount = count($fixable);
+                $unfixedCount = count($unfixable);
+
+                $status = $unfixedCount > 0
+                    ? ($fixedCount > 0 ? '<fg=yellow>partial</>' : '<fg=red>not fixable</>')
+                    : '<fg=cyan>fixed</>';
+
+                $this->output->writeln("  <fg=yellow>!</> {$ruleName} ({$status})");
+
+                if ($unfixedCount > 0) {
+                    $groupedByFile = [];
+                    foreach ($unfixable as $violation) {
+                        $groupedByFile[$violation->file][] = $violation;
+                    }
+
+                    foreach ($groupedByFile as $file => $fileViolations) {
+                        $this->output->writeln("    <fg=gray>{$file}</>");
+
+                        foreach ($fileViolations as $violation) {
+                            $this->output->writeln(
+                                "      <fg=yellow>Line {$violation->line}:</> {$violation->message} <fg=gray>(manual fix required)</>"
+                            );
+
+                            if ($violation->suggestion) {
+                                $this->output->writeln(
+                                    "        <fg=gray>→ {$violation->suggestion}</>"
+                                );
+                            }
+                        }
+                    }
+                }
+
+                $this->output->writeln('');
+            }
+        }
+
+        $fixed = $fixResults['fixed'];
+        $skipped = $fixResults['skipped'];
+        $filesModified = count(array_filter($fixResults['byFile'], fn ($r) => $r['fixed'] > 0));
+
+        $this->output->writeln('<fg=gray>───────────────────────────────</>');
+
+        if ($fixed > 0) {
+            $this->output->writeln("<fg=cyan;options=bold>✓ Fixed {$fixed} issue(s)</> in {$filesModified} file(s)");
+        }
+
+        if ($skipped > 0) {
+            $this->output->writeln("<fg=yellow>! {$skipped} issue(s) require manual attention</>");
+        }
+
+        if ($fixed > 0 && $skipped === 0) {
+            $this->output->writeln('<fg=green;options=bold>All issues have been fixed!</>');
+        }
+    }
+
+    /**
+     * @param  Rule[]  $rules
+     * @param  Violation[]  $violations
      */
     private function reportVerbose(array $rules, array $violations): void
     {

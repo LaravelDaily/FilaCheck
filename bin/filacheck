@@ -3,6 +3,7 @@
 
 declare(strict_types=1);
 
+use Filacheck\Fixer\CodeFixer;
 use Filacheck\Reporting\StandaloneReporter;
 use Filacheck\Rules\DeprecatedActionFormRule;
 use Filacheck\Rules\DeprecatedEmptyLabelRule;
@@ -42,6 +43,8 @@ $output = new ConsoleOutput();
 $args = array_slice($argv, 1);
 $path = null;
 $verbose = false;
+$fix = false;
+$backup = false;
 $showHelp = false;
 $showVersion = false;
 
@@ -52,6 +55,10 @@ foreach ($args as $arg) {
         $showVersion = true;
     } elseif ($arg === '--detailed' || $arg === '-d') {
         $verbose = true;
+    } elseif ($arg === '--fix') {
+        $fix = true;
+    } elseif ($arg === '--backup') {
+        $backup = true;
     } elseif (! str_starts_with($arg, '-')) {
         $path = $arg;
     }
@@ -73,6 +80,8 @@ if ($showHelp) {
     $output->writeln('');
     $output->writeln('<fg=yellow>Options:</>');
     $output->writeln('  -d, --detailed        Show detailed output with rule categories');
+    $output->writeln('  --fix                 Automatically fix issues where possible');
+    $output->writeln('  --backup              Create backup files when fixing (requires --fix)');
     $output->writeln('  -h, --help            Display this help message');
     $output->writeln('  -V, --version         Display version');
     $output->writeln('');
@@ -80,6 +89,8 @@ if ($showHelp) {
     $output->writeln('  filacheck                           Scan app/Filament directory');
     $output->writeln('  filacheck app/Filament/Resources    Scan specific directory');
     $output->writeln('  filacheck --detailed                Show detailed report');
+    $output->writeln('  filacheck --fix                     Auto-fix issues');
+    $output->writeln('  filacheck --fix --backup            Auto-fix with backups');
     exit(0);
 }
 
@@ -116,6 +127,16 @@ $scanner->addRule(new DeprecatedFormsSetRule());
 $violations = $scanner->scan($path);
 
 $reporter = new StandaloneReporter($output, $verbose);
+
+if ($fix && count($violations) > 0) {
+    $fixer = new CodeFixer();
+    $fixResults = $fixer->fix($violations, $backup);
+
+    $reporter->reportWithFixes($scanner->getRules(), $violations, $fixResults);
+
+    exit($fixResults['skipped'] > 0 ? 1 : 0);
+}
+
 $reporter->report($scanner->getRules(), $violations);
 
 exit(count($violations) > 0 ? 1 : 0);
