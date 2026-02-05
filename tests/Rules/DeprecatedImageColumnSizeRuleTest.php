@@ -115,6 +115,30 @@ PHP;
     expect($fixedCode)->not->toContain('->size(50)');
 });
 
+it('does not flag size on non-ImageColumn components', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+
+class TestResource
+{
+    public function form(): array
+    {
+        return [
+            TextInput::make('name')->size('lg'),
+            Select::make('status')->size('sm'),
+        ];
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedImageColumnSizeRule, $code);
+
+    $this->assertNoViolations($violations);
+});
+
 it('fixes multiple size usages', function () {
     $code = <<<'PHP'
 <?php

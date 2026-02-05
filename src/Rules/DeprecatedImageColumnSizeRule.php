@@ -7,7 +7,9 @@ use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
 
 class DeprecatedImageColumnSizeRule implements FixableRule
 {
@@ -35,6 +37,10 @@ class DeprecatedImageColumnSizeRule implements FixableRule
             return [];
         }
 
+        if (! $this->isImageColumnChain($node)) {
+            return [];
+        }
+
         $nameNode = $node->name;
         $startPos = $nameNode->getStartFilePos();
         $endPos = $nameNode->getEndFilePos() + 1;
@@ -52,5 +58,22 @@ class DeprecatedImageColumnSizeRule implements FixableRule
                 replacement: 'imageSize',
             ),
         ];
+    }
+
+    private function isImageColumnChain(MethodCall $node): bool
+    {
+        $current = $node->var;
+
+        while ($current instanceof MethodCall) {
+            $current = $current->var;
+        }
+
+        if ($current instanceof StaticCall && $current->class instanceof Name) {
+            $parts = explode('\\', $current->class->toString());
+
+            return end($parts) === 'ImageColumn';
+        }
+
+        return false;
     }
 }
