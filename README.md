@@ -55,7 +55,7 @@ vendor/bin/filacheck --fix --backup
 
 ## Available Rules
 
-FilaCheck includes 7 rules for detecting deprecated code patterns:
+FilaCheck includes 8 rules for detecting deprecated code patterns:
 
 ### Deprecated Code
 
@@ -68,6 +68,7 @@ FilaCheck includes 7 rules for detecting deprecated code patterns:
 | `deprecated-mutate-form-data-using` | Detects `->mutateFormDataUsing()` which should be `->mutateDataUsing()` |
 | `deprecated-empty-label` | Detects `->label('')` which should be `->hiddenLabel()` |
 | `deprecated-forms-set` | Detects `use Filament\Forms\Set` which should be `use Filament\Schemas\Components\Utilities\Set` |
+| `deprecated-image-column-size` | Detects `->size()` on ImageColumn which should be `->imageSize()` |
 
 ---
 
