@@ -24,7 +24,6 @@ class FilacheckCommand extends Command
         $fix = $this->option('fix');
         $backup = $this->option('backup');
 
-        $this->info('FilaCheck v0.1');
         $this->line("Scanning: {$path}");
         $this->newLine();
 
