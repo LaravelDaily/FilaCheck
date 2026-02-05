@@ -55,7 +55,7 @@ vendor/bin/filacheck --fix --backup
 
 ## Available Rules
 
-FilaCheck includes 6 rules for detecting deprecated code patterns:
+FilaCheck includes 7 rules for detecting deprecated code patterns:
 
 ### Deprecated Code
 
@@ -67,6 +67,7 @@ FilaCheck includes 6 rules for detecting deprecated code patterns:
 | `deprecated-placeholder` | Detects `Placeholder::make()` which should be `TextEntry::make()->state()` |
 | `deprecated-mutate-form-data-using` | Detects `->mutateFormDataUsing()` which should be `->mutateDataUsing()` |
 | `deprecated-empty-label` | Detects `->label('')` which should be `->hiddenLabel()` |
+| `deprecated-forms-set` | Detects `use Filament\Forms\Set` which should be `use Filament\Schemas\Components\Utilities\Set` |
 
 ---
 

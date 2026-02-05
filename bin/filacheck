@@ -7,6 +7,7 @@ use Filacheck\Reporting\StandaloneReporter;
 use Filacheck\Rules\DeprecatedActionFormRule;
 use Filacheck\Rules\DeprecatedEmptyLabelRule;
 use Filacheck\Rules\DeprecatedFilterFormRule;
+use Filacheck\Rules\DeprecatedFormsSetRule;
 use Filacheck\Rules\DeprecatedMutateFormDataUsingRule;
 use Filacheck\Rules\DeprecatedPlaceholderRule;
 use Filacheck\Rules\DeprecatedReactiveRule;
@@ -110,6 +111,7 @@ $scanner->addRule(new DeprecatedFilterFormRule());
 $scanner->addRule(new DeprecatedPlaceholderRule());
 $scanner->addRule(new DeprecatedMutateFormDataUsingRule());
 $scanner->addRule(new DeprecatedEmptyLabelRule());
+$scanner->addRule(new DeprecatedFormsSetRule());
 
 $violations = $scanner->scan($path);
 
