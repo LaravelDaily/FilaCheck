@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 use Filacheck\Fixer\CodeFixer;
 use Filacheck\Reporting\StandaloneReporter;
+use Filacheck\Rules\BladeRule;
 use Filacheck\Rules\DeprecatedActionFormRule;
 use Filacheck\Rules\DeprecatedEmptyLabelRule;
 use Filacheck\Rules\DeprecatedFilterFormRule;
@@ -142,6 +143,14 @@ foreach ($registry->all() as $rule) {
 }
 
 $violations = $scanner->scan($path);
+
+$hasBladeRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof BladeRule);
+
+if (! empty($hasBladeRules)) {
+    $bladeDir = getcwd().'/resources/views/filament';
+    $bladeViolations = $scanner->scanBladeFiles($bladeDir, getcwd());
+    $violations = array_merge($violations, $bladeViolations);
+}
 
 $reporter = new StandaloneReporter($output, $verbose);
 

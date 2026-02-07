@@ -2,6 +2,7 @@
 
 namespace Filacheck\Scanner;
 
+use Filacheck\Rules\BladeRule;
 use Filacheck\Rules\Rule;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
@@ -55,6 +56,63 @@ class ResourceScanner
         }
 
         return $violations;
+    }
+
+    /**
+     * @return Violation[]
+     */
+    public function scanBladeFiles(string $directory, string $basePath): array
+    {
+        $bladeRules = array_filter($this->rules, fn (Rule $rule) => $rule instanceof BladeRule);
+
+        if (empty($bladeRules)) {
+            return [];
+        }
+
+        $violations = [];
+        $files = $this->findBladeFiles($directory);
+
+        foreach ($files as $file) {
+            $code = file_get_contents($file->getPathname());
+            $context = new Context(
+                file: $file->getPathname(),
+                code: $code,
+                basePath: $basePath,
+            );
+
+            foreach ($bladeRules as $rule) {
+                $ruleViolations = $rule->checkBlade($context);
+                foreach ($ruleViolations as $violation) {
+                    $violation->rule = $rule->name();
+                }
+                $violations = array_merge($violations, $ruleViolations);
+            }
+        }
+
+        return $violations;
+    }
+
+    /**
+     * @return SplFileInfo[]
+     */
+    private function findBladeFiles(string $directory): array
+    {
+        if (! is_dir($directory)) {
+            return [];
+        }
+
+        $files = [];
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($directory)
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile() && str_ends_with($file->getFilename(), '.blade.php')) {
+                $files[] = $file;
+            }
+        }
+
+        return $files;
     }
 
     /**

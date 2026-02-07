@@ -4,6 +4,7 @@ namespace Filacheck\Commands;
 
 use Filacheck\Fixer\CodeFixer;
 use Filacheck\Reporting\ConsoleReporter;
+use Filacheck\Rules\BladeRule;
 use Filacheck\Scanner\ResourceScanner;
 use Filacheck\Support\RuleRegistry;
 use Illuminate\Console\Command;
@@ -34,6 +35,13 @@ class FilacheckCommand extends Command
         }
 
         $violations = $scanner->scan($path);
+
+        $hasBladeRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof BladeRule);
+
+        if (! empty($hasBladeRules)) {
+            $bladeViolations = $scanner->scanBladeFiles(resource_path('views/filament'), base_path());
+            $violations = array_merge($violations, $bladeViolations);
+        }
 
         $reporter = new ConsoleReporter($this, $this->option('detailed'));
 
