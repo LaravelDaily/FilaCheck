@@ -17,7 +17,7 @@
         "symfony/console": "^6.0|^7.0"
     },
     "require-dev": {
-        "pestphp/pest": "^3.0",
+        "pestphp/pest": "^3.0|^4.0",
         "orchestra/testbench": "^9.0|^10.0"
     },
     "bin": ["bin/filacheck"],
