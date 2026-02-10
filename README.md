@@ -35,6 +35,9 @@ vendor/bin/filacheck --detailed
 php artisan filacheck
 php artisan filacheck app/Filament/Resources
 php artisan filacheck --detailed
+
+php artisan filacheck --fix
+php artisan filacheck --fix --backup
 ```
 
 ### Auto-fixing Issues (Beta)
@@ -49,33 +52,33 @@ vendor/bin/filacheck --fix
 vendor/bin/filacheck --fix --backup
 ```
 
-> **Warning:** The auto-fix feature is in early stages. Always ensure your code is committed to version control (e.g., Git/GitHub) before running `--fix` so you can easily review and revert changes if needed.
+> [!WARNING] 
+> The auto-fix feature is in early stages. Always ensure your code is committed to version control (e.g., Git/GitHub) before running `--fix` so you can easily review and revert changes if needed.
 
 ---
 
-## Available Rules
+## Available Rules (Free)
 
-FilaCheck includes 8 rules for detecting deprecated code patterns:
+FilaCheck includes the following rules for detecting deprecated code patterns:
 
 ### Deprecated Code
 
-| Rule | Description |
-|------|-------------|
-| `deprecated-reactive` | Detects `->reactive()` which should be replaced with `->live()` |
-| `deprecated-action-form` | Detects `->form()` on Actions which should be `->schema()` |
-| `deprecated-filter-form` | Detects `->form()` on Filters which should be `->schema()` |
-| `deprecated-placeholder` | Detects `Placeholder::make()` which should be `TextEntry::make()->state()` |
-| `deprecated-mutate-form-data-using` | Detects `->mutateFormDataUsing()` which should be `->mutateDataUsing()` |
-| `deprecated-empty-label` | Detects `->label('')` which should be `->hiddenLabel()` |
-| `deprecated-forms-set` | Detects `use Filament\Forms\Set` which should be `use Filament\Schemas\Components\Utilities\Set` |
-| `deprecated-image-column-size` | Detects `->size()` on ImageColumn which should be `->imageSize()` |
+| Rule | Description | Fixable |
+|------|-------------|---------|
+| `deprecated-reactive` | Detects `->reactive()` which should be replaced with `->live()` | Yes |
+| `deprecated-action-form` | Detects `->form()` on Actions which should be `->schema()` | Yes |
+| `deprecated-filter-form` | Detects `->form()` on Filters which should be `->schema()` | Yes |
+| `deprecated-placeholder` | Detects `Placeholder::make()` which should be `TextEntry::make()->state()` | No |
+| `deprecated-mutate-form-data-using` | Detects `->mutateFormDataUsing()` which should be `->mutateDataUsing()` | Yes |
+| `deprecated-empty-label` | Detects `->label('')` which should be `->hiddenLabel()` (or `->iconButton()` on Actions) | Yes |
+| `deprecated-forms-set` | Detects `use Filament\Forms\Set` which should be `use Filament\Schemas\Components\Utilities\Set` | Yes |
+| `deprecated-image-column-size` | Detects `->size()` on ImageColumn which should be `->imageSize()` | Yes |
 
 ---
 
 ## Example Output
 
-```
-FilaCheck v0.1
+```sh
 Scanning: app/Filament
 
 ..x..x.......
@@ -114,7 +117,6 @@ I'm working on **FilaCheck Pro** with additional performance and best practices 
 | Rule | Description |
 |------|-------------|
 | `too-many-columns` | Warns when tables have more than 10 columns |
-| `select-relationship-preload` | Detects `Select` with `->relationship()` missing `->preload()` |
 | `table-defer-loading` | Suggests adding `->deferLoading()` to tables |
 | `table-missing-eager-loading` | Detects relationship columns without eager loading |
 | `large-option-list-searchable` | Suggests `->searchable()` for lists with 10+ options |
