@@ -116,17 +116,10 @@ This makes FilaCheck perfect for CI pipelines.
 
 | Rule | Description |
 |------|-------------|
-<<<<<<< HEAD
-| `too-many-columns` | Warns when tables have more than 10 columns (configurable) |
-| `table-defer-loading` | Detects tables missing `->deferLoading()` for better initial page load |
-| `table-missing-eager-loading` | Detects N+1 query problems with relationship columns missing eager loading |
-| `large-option-list-searchable` | Suggests `->searchable()` for Select/CheckboxList/Radio with 10+ options |
-=======
 | `too-many-columns` | Warns when tables have more than 10 columns |
 | `table-defer-loading` | Suggests adding `->deferLoading()` to tables |
 | `table-missing-eager-loading` | Detects relationship columns without eager loading |
 | `large-option-list-searchable` | Suggests `->searchable()` for lists with 10+ options |
->>>>>>> 79326058498fcbff9ff86b08006c0a129eeee576
 
 ### Best Practices Rules
 
