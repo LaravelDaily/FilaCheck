@@ -105,28 +105,30 @@ This makes FilaCheck perfect for CI pipelines.
 
 ---
 
-## FilaCheck Pro (Coming Soon)
+## [FilaCheck Pro](https://filamentexamples.com/filacheck)
 
-I'm working on **FilaCheck Pro** with additional performance and best practices rules:
+**FilaCheck Pro** adds 9 additional rules for performance optimization and best practices.
 
-### Performance Rules (planned)
-
-| Rule | Description |
-|------|-------------|
-| `too-many-columns` | Warns when tables have more than 10 columns |
-| `select-relationship-preload` | Detects `Select` with `->relationship()` missing `->preload()` |
-| `table-defer-loading` | Suggests adding `->deferLoading()` to tables |
-| `table-missing-eager-loading` | Detects relationship columns without eager loading |
-| `large-option-list-searchable` | Suggests `->searchable()` for lists with 10+ options |
-
-### Best Practices Rules (planned)
+### Performance Rules
 
 | Rule | Description |
 |------|-------------|
-| `string-icon-instead-of-enum` | Detects string icons like `'heroicon-o-pencil'` - use `Heroicon::Pencil` enum instead |
-| `unnecessary-unique-ignore-record` | Detects `->unique(ignoreRecord: true)` which is now the default in Filament v4 |
+| `too-many-columns` | Warns when tables have more than 10 columns (configurable) |
+| `table-defer-loading` | Detects tables missing `->deferLoading()` for better initial page load |
+| `table-missing-eager-loading` | Detects N+1 query problems with relationship columns missing eager loading |
+| `large-option-list-searchable` | Suggests `->searchable()` for Select/CheckboxList/Radio with 10+ options |
 
-Interested? Star this repo and follow [@PovilasKorop](https://twitter.com/PovilasKorop) for updates.
+### Best Practices Rules
+
+| Rule | Description |
+|------|-------------|
+| `string-icon-instead-of-enum` | Detects string icons like `'heroicon-o-pencil'` - use `Heroicon::Pencil` enum instead (auto-fixable) |
+| `string-font-weight-instead-of-enum` | Detects string font weights like `'bold'` - use `FontWeight::Bold` enum instead (auto-fixable) |
+| `deprecated-notification-action-namespace` | Detects old `Filament\Notifications\Actions\Action` namespace - use `Filament\Actions\Action` instead (auto-fixable) |
+| `unnecessary-unique-ignore-record` | Detects `->unique()->ignoreRecord(true)` which is now the default in Filament v4 (auto-fixable) |
+| `custom-theme-needed` | Detects Tailwind CSS usage in Blade files without a custom Filament theme configured |
+
+Get FilaCheck Pro at [filamentexamples.com/filacheck](https://filamentexamples.com/filacheck).
 
 ---
 
