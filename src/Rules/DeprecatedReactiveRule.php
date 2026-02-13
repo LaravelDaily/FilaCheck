@@ -3,6 +3,7 @@
 namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
+use Filacheck\Rules\Concerns\CalculatesLineNumbers;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
@@ -11,6 +12,7 @@ use PhpParser\Node\Identifier;
 
 class DeprecatedReactiveRule implements FixableRule
 {
+    use CalculatesLineNumbers;
     public function name(): string
     {
         return 'deprecated-reactive';
@@ -44,7 +46,7 @@ class DeprecatedReactiveRule implements FixableRule
                 level: 'warning',
                 message: 'The `reactive()` method is deprecated.',
                 file: $context->file,
-                line: $node->getLine(),
+                line: $this->getLineFromPosition($context->code, $startPos),
                 suggestion: 'Use `live()` instead of `reactive()`.',
                 isFixable: true,
                 startPos: $startPos,

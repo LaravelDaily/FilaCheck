@@ -3,6 +3,7 @@
 namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
+use Filacheck\Rules\Concerns\CalculatesLineNumbers;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
@@ -13,6 +14,7 @@ use PhpParser\Node\Name;
 
 class DeprecatedImageColumnSizeRule implements FixableRule
 {
+    use CalculatesLineNumbers;
     public function name(): string
     {
         return 'deprecated-image-column-size';
@@ -50,7 +52,7 @@ class DeprecatedImageColumnSizeRule implements FixableRule
                 level: 'warning',
                 message: 'The `size()` method on ImageColumn is deprecated.',
                 file: $context->file,
-                line: $node->getLine(),
+                line: $this->getLineFromPosition($context->code, $startPos),
                 suggestion: 'Use `imageSize()` instead of `size()`.',
                 isFixable: true,
                 startPos: $startPos,

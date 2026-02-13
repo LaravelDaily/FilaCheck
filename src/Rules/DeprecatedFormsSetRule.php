@@ -3,6 +3,7 @@
 namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
+use Filacheck\Rules\Concerns\CalculatesLineNumbers;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
@@ -10,6 +11,7 @@ use PhpParser\Node\Stmt\Use_;
 
 class DeprecatedFormsSetRule implements FixableRule
 {
+    use CalculatesLineNumbers;
     public function name(): string
     {
         return 'deprecated-forms-set';
@@ -37,7 +39,7 @@ class DeprecatedFormsSetRule implements FixableRule
                     level: 'warning',
                     message: 'The `Filament\Forms\Set` class namespace is deprecated.',
                     file: $context->file,
-                    line: $node->getLine(),
+                    line: $this->getLineFromPosition($context->code, $startPos),
                     suggestion: 'Use `Filament\Schemas\Components\Utilities\Set` instead of `Filament\Forms\Set`.',
                     isFixable: true,
                     startPos: $startPos,

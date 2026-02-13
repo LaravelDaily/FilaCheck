@@ -3,6 +3,7 @@
 namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
+use Filacheck\Rules\Concerns\CalculatesLineNumbers;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
@@ -11,6 +12,7 @@ use PhpParser\Node\Identifier;
 
 class DeprecatedMutateFormDataUsingRule implements FixableRule
 {
+    use CalculatesLineNumbers;
     public function name(): string
     {
         return 'deprecated-mutate-form-data-using';
@@ -44,7 +46,7 @@ class DeprecatedMutateFormDataUsingRule implements FixableRule
                 level: 'warning',
                 message: 'The `mutateFormDataUsing()` method is deprecated in Filament v4.',
                 file: $context->file,
-                line: $node->getLine(),
+                line: $this->getLineFromPosition($context->code, $startPos),
                 suggestion: 'Use `mutateDataUsing()` instead.',
                 isFixable: true,
                 startPos: $startPos,

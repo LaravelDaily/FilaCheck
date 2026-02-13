@@ -3,6 +3,7 @@
 namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
+use Filacheck\Rules\Concerns\CalculatesLineNumbers;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
@@ -14,6 +15,7 @@ use PhpParser\Node\Scalar\String_;
 
 class DeprecatedEmptyLabelRule implements FixableRule
 {
+    use CalculatesLineNumbers;
     public function name(): string
     {
         return 'deprecated-empty-label';
@@ -70,7 +72,7 @@ class DeprecatedEmptyLabelRule implements FixableRule
                     level: 'warning',
                     message: 'Using `label(\'\')` to hide labels is deprecated.',
                     file: $context->file,
-                    line: $node->getLine(),
+                    line: $this->getLineFromPosition($context->code, $startPos),
                     suggestion: 'Use `iconButton()` instead of `label(\'\')` for Actions.',
                     isFixable: true,
                     startPos: $startPos,
@@ -85,7 +87,7 @@ class DeprecatedEmptyLabelRule implements FixableRule
                 level: 'warning',
                 message: 'Using `label(\'\')` to hide labels is deprecated.',
                 file: $context->file,
-                line: $node->getLine(),
+                line: $this->getLineFromPosition($context->code, $startPos),
                 suggestion: 'Use `hiddenLabel()` instead of `label(\'\')`.',
                 isFixable: true,
                 startPos: $startPos,
