@@ -3,6 +3,7 @@
 namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
+use Filacheck\Rules\Concerns\CalculatesLineNumbers;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
@@ -13,6 +14,7 @@ use PhpParser\Node\Name;
 
 class DeprecatedActionFormRule implements FixableRule
 {
+    use CalculatesLineNumbers;
     private const ACTION_CLASSES = [
         'Action',
         'EditAction',
@@ -65,7 +67,7 @@ class DeprecatedActionFormRule implements FixableRule
                 level: 'warning',
                 message: 'The `form()` method on actions is deprecated in Filament 4.',
                 file: $context->file,
-                line: $node->getLine(),
+                line: $this->getLineFromPosition($context->code, $startPos),
                 suggestion: 'Use `schema()` instead of `form()`.',
                 isFixable: true,
                 startPos: $startPos,

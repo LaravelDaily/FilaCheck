@@ -45,13 +45,13 @@ class ResourceScanner
     /**
      * @return Violation[]
      */
-    public function scan(string $directory): array
+    public function scan(string $directory, ?string $basePath = null): array
     {
         $violations = [];
         $files = $this->findPhpFiles($directory);
 
         foreach ($files as $file) {
-            $fileViolations = $this->scanFile($file);
+            $fileViolations = $this->scanFile($file, $basePath);
             $violations = array_merge($violations, $fileViolations);
         }
 
@@ -141,12 +141,20 @@ class ResourceScanner
     /**
      * @return Violation[]
      */
-    private function scanFile(SplFileInfo $file): array
+    private function scanFile(SplFileInfo $file, ?string $basePath = null): array
     {
         $code = file_get_contents($file->getPathname());
+        $filePath = $file->getPathname();
+
+        // Make path relative to basePath if provided
+        if ($basePath !== null && str_starts_with($filePath, $basePath)) {
+            $filePath = substr($filePath, strlen($basePath) + 1);
+        }
+
         $context = new Context(
-            file: $file->getPathname(),
+            file: $filePath,
             code: $code,
+            basePath: $basePath,
         );
 
         try {

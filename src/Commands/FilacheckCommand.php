@@ -34,7 +34,7 @@ class FilacheckCommand extends Command
             $scanner->addRule($rule);
         }
 
-        $violations = $scanner->scan($path);
+        $violations = $scanner->scan($path, base_path());
 
         $hasBladeRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof BladeRule);
 

@@ -3,6 +3,7 @@
 namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
+use Filacheck\Rules\Concerns\CalculatesLineNumbers;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
@@ -12,6 +13,7 @@ use PhpParser\Node\Name;
 
 class DeprecatedPlaceholderRule implements Rule
 {
+    use CalculatesLineNumbers;
     public function name(): string
     {
         return 'deprecated-placeholder';
@@ -52,7 +54,7 @@ class DeprecatedPlaceholderRule implements Rule
                 level: 'warning',
                 message: 'The `Placeholder` component is deprecated in Filament v4.',
                 file: $context->file,
-                line: $node->getLine(),
+                line: $this->getLineFromPosition($context->code, $node->name->getStartFilePos()),
                 suggestion: 'Use `TextEntry::make()->state()` instead.',
             ),
         ];

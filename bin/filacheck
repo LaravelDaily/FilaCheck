@@ -142,7 +142,7 @@ foreach ($registry->all() as $rule) {
     $scanner->addRule($rule);
 }
 
-$violations = $scanner->scan($path);
+$violations = $scanner->scan($path, getcwd());
 
 $hasBladeRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof BladeRule);
 
