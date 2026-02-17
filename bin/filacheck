@@ -12,11 +12,12 @@ use Filacheck\Support\RuleRegistry;
 use Symfony\Component\Console\Output\ConsoleOutput;
 
 // Autoload handling for different installation contexts
-$autoloadPaths = [
-    __DIR__.'/../vendor/autoload.php',           // Package development
+$autoloadPaths = array_filter([
+    $GLOBALS['_composer_autoload_path'] ?? null, // Composer bin proxy (most reliable)
     __DIR__.'/../../../autoload.php',            // Installed as dependency
     __DIR__.'/../../../../vendor/autoload.php',  // Laravel project context
-];
+    __DIR__.'/../vendor/autoload.php',           // Package development
+]);
 
 $autoloaded = false;
 foreach ($autoloadPaths as $autoloadPath) {
