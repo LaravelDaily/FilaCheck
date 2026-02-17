@@ -48,7 +48,13 @@ vendor/bin/filacheck --fix --backup
 
 ## Available Rules (Free)
 
-FilaCheck includes the following rules for detecting deprecated code patterns:
+FilaCheck includes the following rules for detecting deprecated code patterns and common issues:
+
+### Best Practices
+
+| Rule | Description | Fixable |
+|------|-------------|---------|
+| `action-in-bulk-action-group` | Detects `Action::make()` inside `BulkActionGroup::make()` which should be `BulkAction::make()` | Yes |
 
 ### Deprecated Code
 
