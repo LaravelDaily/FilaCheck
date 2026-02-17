@@ -29,17 +29,6 @@ vendor/bin/filacheck app/Filament/Resources
 vendor/bin/filacheck --detailed
 ```
 
-### Laravel Artisan Command
-
-```bash
-php artisan filacheck
-php artisan filacheck app/Filament/Resources
-php artisan filacheck --detailed
-
-php artisan filacheck --fix
-php artisan filacheck --fix --backup
-```
-
 ### Auto-fixing Issues (Beta)
 
 FilaCheck can automatically fix many issues it detects:
@@ -73,6 +62,7 @@ FilaCheck includes the following rules for detecting deprecated code patterns:
 | `deprecated-empty-label` | Detects `->label('')` which should be `->hiddenLabel()` (or `->iconButton()` on Actions) | Yes |
 | `deprecated-forms-set` | Detects `use Filament\Forms\Set` which should be `use Filament\Schemas\Components\Utilities\Set` | Yes |
 | `deprecated-image-column-size` | Detects `->size()` on ImageColumn which should be `->imageSize()` | Yes |
+| `deprecated-view-property` | Detects `$view` property not declared as `protected string` | Yes |
 
 ---
 

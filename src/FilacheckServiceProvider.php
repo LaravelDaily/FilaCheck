@@ -2,7 +2,6 @@
 
 namespace Filacheck;
 
-use Filacheck\Commands\FilacheckCommand;
 use Filacheck\Rules\DeprecatedActionFormRule;
 use Filacheck\Rules\DeprecatedEmptyLabelRule;
 use Filacheck\Rules\DeprecatedFilterFormRule;
@@ -11,6 +10,7 @@ use Filacheck\Rules\DeprecatedImageColumnSizeRule;
 use Filacheck\Rules\DeprecatedMutateFormDataUsingRule;
 use Filacheck\Rules\DeprecatedPlaceholderRule;
 use Filacheck\Rules\DeprecatedReactiveRule;
+use Filacheck\Rules\DeprecatedViewPropertyRule;
 use Filacheck\Support\RuleRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -23,18 +23,13 @@ class FilacheckServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->registerFreeRules();
-
-        if ($this->app->runningInConsole()) {
-            $this->commands([
-                FilacheckCommand::class,
-            ]);
-        }
+        $this->app->make(RuleRegistry::class)->register(static::rules());
     }
 
-    protected function registerFreeRules(): void
+    /** @return array<class-string<\Filacheck\Rules\Rule>> */
+    public static function rules(): array
     {
-        $this->app->make(RuleRegistry::class)->register([
+        return [
             DeprecatedReactiveRule::class,
             DeprecatedActionFormRule::class,
             DeprecatedFilterFormRule::class,
@@ -43,6 +38,7 @@ class FilacheckServiceProvider extends ServiceProvider
             DeprecatedEmptyLabelRule::class,
             DeprecatedFormsSetRule::class,
             DeprecatedImageColumnSizeRule::class,
-        ]);
+            DeprecatedViewPropertyRule::class,
+        ];
     }
 }
