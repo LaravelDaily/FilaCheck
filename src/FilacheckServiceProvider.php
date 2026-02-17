@@ -13,6 +13,7 @@ use Filacheck\Rules\DeprecatedMutateFormDataUsingRule;
 use Filacheck\Rules\DeprecatedPlaceholderRule;
 use Filacheck\Rules\DeprecatedReactiveRule;
 use Filacheck\Rules\DeprecatedViewPropertyRule;
+use Filacheck\Rules\WrongTabNamespaceRule;
 use Filacheck\Support\RuleRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -43,6 +44,7 @@ class FilacheckServiceProvider extends ServiceProvider
             DeprecatedViewPropertyRule::class,
             ActionInBulkActionGroupRule::class,
             DeprecatedBulkActionsRule::class,
+            WrongTabNamespaceRule::class,
         ];
     }
 }
