@@ -17,7 +17,7 @@ abstract class TestCase extends BaseTestCase
      */
     protected function scanCode(Rule $rule, string $code): array
     {
-        $tempDir = sys_get_temp_dir().'/filacheck-test-'.uniqid();
+        $tempDir = sys_get_temp_dir().'/filacheck-test-'.uniqid('', true).'-'.getmypid();
         mkdir($tempDir, 0755, true);
 
         $tempFile = $tempDir.'/TestResource.php';
@@ -39,7 +39,7 @@ abstract class TestCase extends BaseTestCase
      */
     protected function scanAndFix(Rule $rule, string $code): string
     {
-        $tempDir = sys_get_temp_dir().'/filacheck-test-'.uniqid();
+        $tempDir = sys_get_temp_dir().'/filacheck-test-'.uniqid('', true).'-'.getmypid();
         mkdir($tempDir, 0755, true);
 
         $tempFile = $tempDir.'/TestResource.php';
