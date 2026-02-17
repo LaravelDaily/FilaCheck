@@ -5,15 +5,8 @@ declare(strict_types=1);
 
 use Filacheck\Fixer\CodeFixer;
 use Filacheck\Reporting\StandaloneReporter;
+use Filacheck\FilacheckServiceProvider;
 use Filacheck\Rules\BladeRule;
-use Filacheck\Rules\DeprecatedActionFormRule;
-use Filacheck\Rules\DeprecatedEmptyLabelRule;
-use Filacheck\Rules\DeprecatedFilterFormRule;
-use Filacheck\Rules\DeprecatedFormsSetRule;
-use Filacheck\Rules\DeprecatedImageColumnSizeRule;
-use Filacheck\Rules\DeprecatedMutateFormDataUsingRule;
-use Filacheck\Rules\DeprecatedPlaceholderRule;
-use Filacheck\Rules\DeprecatedReactiveRule;
 use Filacheck\Scanner\ResourceScanner;
 use Filacheck\Support\RuleRegistry;
 use Symfony\Component\Console\Output\ConsoleOutput;
@@ -120,17 +113,7 @@ $scanner = new ResourceScanner();
 
 $registry = new RuleRegistry();
 
-// Free rules
-$registry->register([
-    DeprecatedReactiveRule::class,
-    DeprecatedActionFormRule::class,
-    DeprecatedFilterFormRule::class,
-    DeprecatedPlaceholderRule::class,
-    DeprecatedMutateFormDataUsingRule::class,
-    DeprecatedEmptyLabelRule::class,
-    DeprecatedFormsSetRule::class,
-    DeprecatedImageColumnSizeRule::class,
-]);
+$registry->register(FilacheckServiceProvider::rules());
 
 // Pro rules (auto-detected if installed)
 $proProvider = 'FilacheckPro\\FilacheckProServiceProvider';

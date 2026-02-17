@@ -73,6 +73,7 @@ FilaCheck includes the following rules for detecting deprecated code patterns:
 | `deprecated-empty-label` | Detects `->label('')` which should be `->hiddenLabel()` (or `->iconButton()` on Actions) | Yes |
 | `deprecated-forms-set` | Detects `use Filament\Forms\Set` which should be `use Filament\Schemas\Components\Utilities\Set` | Yes |
 | `deprecated-image-column-size` | Detects `->size()` on ImageColumn which should be `->imageSize()` | Yes |
+| `deprecated-view-property` | Detects `$view` property not declared as `protected string` | Yes |
 
 ---
 

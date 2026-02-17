@@ -50,3 +50,21 @@ it('supports chained registration', function () {
 
     expect($result)->toBeInstanceOf(RuleRegistry::class);
 });
+
+it('registers all rules from FilacheckServiceProvider', function () {
+    $rules = \Filacheck\FilacheckServiceProvider::rules();
+
+    expect($rules)
+        ->toBeArray()
+        ->toEqual([
+            DeprecatedReactiveRule::class,
+            \Filacheck\Rules\DeprecatedActionFormRule::class,
+            \Filacheck\Rules\DeprecatedFilterFormRule::class,
+            \Filacheck\Rules\DeprecatedPlaceholderRule::class,
+            \Filacheck\Rules\DeprecatedMutateFormDataUsingRule::class,
+            \Filacheck\Rules\DeprecatedEmptyLabelRule::class,
+            \Filacheck\Rules\DeprecatedFormsSetRule::class,
+            \Filacheck\Rules\DeprecatedImageColumnSizeRule::class,
+            \Filacheck\Rules\DeprecatedViewPropertyRule::class,
+    ]);
+});
