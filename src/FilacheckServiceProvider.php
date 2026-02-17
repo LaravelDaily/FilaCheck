@@ -2,7 +2,6 @@
 
 namespace Filacheck;
 
-use Filacheck\Commands\FilacheckCommand;
 use Filacheck\Rules\DeprecatedActionFormRule;
 use Filacheck\Rules\DeprecatedEmptyLabelRule;
 use Filacheck\Rules\DeprecatedFilterFormRule;
@@ -25,12 +24,6 @@ class FilacheckServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->app->make(RuleRegistry::class)->register(static::rules());
-
-        if ($this->app->runningInConsole()) {
-            $this->commands([
-                FilacheckCommand::class,
-            ]);
-        }
     }
 
     /** @return array<class-string<\Filacheck\Rules\Rule>> */

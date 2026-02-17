@@ -29,17 +29,6 @@ vendor/bin/filacheck app/Filament/Resources
 vendor/bin/filacheck --detailed
 ```
 
-### Laravel Artisan Command
-
-```bash
-php artisan filacheck
-php artisan filacheck app/Filament/Resources
-php artisan filacheck --detailed
-
-php artisan filacheck --fix
-php artisan filacheck --fix --backup
-```
-
 ### Auto-fixing Issues (Beta)
 
 FilaCheck can automatically fix many issues it detects:
