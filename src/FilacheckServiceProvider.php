@@ -4,6 +4,7 @@ namespace Filacheck;
 
 use Filacheck\Rules\ActionInBulkActionGroupRule;
 use Filacheck\Rules\DeprecatedActionFormRule;
+use Filacheck\Rules\DeprecatedBulkActionsRule;
 use Filacheck\Rules\DeprecatedEmptyLabelRule;
 use Filacheck\Rules\DeprecatedFilterFormRule;
 use Filacheck\Rules\DeprecatedFormsSetRule;
@@ -41,6 +42,7 @@ class FilacheckServiceProvider extends ServiceProvider
             DeprecatedImageColumnSizeRule::class,
             DeprecatedViewPropertyRule::class,
             ActionInBulkActionGroupRule::class,
+            DeprecatedBulkActionsRule::class,
         ];
     }
 }
