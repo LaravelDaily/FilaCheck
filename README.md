@@ -14,9 +14,7 @@ composer require laraveldaily/filacheck --dev
 
 ## Usage
 
-You can run Filacheck as a Terminal or Artisan command.
-
-### Standalone
+You can run Filacheck as a Terminal command.
 
 ```bash
 # Scan default app/Filament directory
