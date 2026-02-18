@@ -44,17 +44,18 @@ vendor/bin/filacheck --fix --backup
 
 ---
 
-## Available Rules (Free)
+## Available Rules (12 Free)
 
 FilaCheck includes the following rules for detecting deprecated code patterns and common issues:
 
-### Best Practices
+### Best Practices (2 rules)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
 | `action-in-bulk-action-group` | Detects `Action::make()` inside `BulkActionGroup::make()` which should be `BulkAction::make()` | Yes |
+| `wrong-tab-namespace` | Detects wrong `Tab` namespace - should be `Filament\Schemas\Components\Tabs\Tab` | Yes |
 
-### Deprecated Code
+### Deprecated Code (10 rules)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
@@ -67,6 +68,7 @@ FilaCheck includes the following rules for detecting deprecated code patterns an
 | `deprecated-forms-set` | Detects `use Filament\Forms\Set` which should be `use Filament\Schemas\Components\Utilities\Set` | Yes |
 | `deprecated-image-column-size` | Detects `->size()` on ImageColumn which should be `->imageSize()` | Yes |
 | `deprecated-view-property` | Detects `$view` property not declared as `protected string` | Yes |
+| `deprecated-bulk-actions` | Detects `->bulkActions()` which should be replaced with `->toolbarActions()` | Yes |
 
 ---
 
@@ -106,24 +108,24 @@ This makes FilaCheck perfect for CI pipelines.
 
 **FilaCheck Pro** adds 9 additional rules for performance optimization and best practices.
 
-### Performance Rules
+### Performance Rules (4 rules)
 
-| Rule | Description |
-|------|-------------|
-| `too-many-columns` | Warns when tables have more than 10 columns |
-| `table-defer-loading` | Suggests adding `->deferLoading()` to tables |
-| `table-missing-eager-loading` | Detects relationship columns without eager loading |
-| `large-option-list-searchable` | Suggests `->searchable()` for lists with 10+ options |
+| Rule | Description | Fixable |
+|------|-------------|---------|
+| `too-many-columns` | Warns when tables have more than 10 columns | No |
+| `table-defer-loading` | Suggests adding `->deferLoading()` to tables | No |
+| `table-missing-eager-loading` | Suggests enabling `Model::preventLazyLoading()` (or `Model::shouldBeStrict()`) in your `AppServiceProvider` to catch N+1 queries | No |
+| `large-option-list-searchable` | Suggests `->searchable()` for lists with 10+ options | No |
 
-### Best Practices Rules
+### Best Practices Rules (5 rules)
 
-| Rule | Description |
-|------|-------------|
-| `string-icon-instead-of-enum` | Detects string icons like `'heroicon-o-pencil'` - use `Heroicon::Pencil` enum instead (auto-fixable) |
-| `string-font-weight-instead-of-enum` | Detects string font weights like `'bold'` - use `FontWeight::Bold` enum instead (auto-fixable) |
-| `deprecated-notification-action-namespace` | Detects old `Filament\Notifications\Actions\Action` namespace - use `Filament\Actions\Action` instead (auto-fixable) |
-| `unnecessary-unique-ignore-record` | Detects `->unique()->ignoreRecord(true)` which is now the default in Filament v4 (auto-fixable) |
-| `custom-theme-needed` | Detects Tailwind CSS usage in Blade files without a custom Filament theme configured |
+| Rule | Description | Fixable |
+|------|-------------|---------|
+| `string-icon-instead-of-enum` | Detects string icons like `'heroicon-o-pencil'` - use `Heroicon::Pencil` enum instead | Yes |
+| `string-font-weight-instead-of-enum` | Detects string font weights like `'bold'` - use `FontWeight::Bold` enum instead | Yes |
+| `deprecated-notification-action-namespace` | Detects deprecated `Filament\Notifications\Actions\Action` namespace - use `Filament\Actions\Action` instead | Yes |
+| `unnecessary-unique-ignore-record` | Detects `->unique(ignoreRecord: true)` which is now the default in Filament v4 | Yes |
+| `custom-theme-needed` | Detects Blade files using Tailwind CSS classes without a custom Filament theme configured | No |
 
 Get FilaCheck Pro at [filamentexamples.com/filacheck](https://filamentexamples.com/filacheck).
 
