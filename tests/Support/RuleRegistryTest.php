@@ -68,5 +68,6 @@ it('registers all rules from FilacheckServiceProvider', function () {
             \Filacheck\Rules\DeprecatedViewPropertyRule::class,
             \Filacheck\Rules\ActionInBulkActionGroupRule::class,
             \Filacheck\Rules\DeprecatedBulkActionsRule::class,
+            \Filacheck\Rules\WrongTabNamespaceRule::class,
     ]);
 });
