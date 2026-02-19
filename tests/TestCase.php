@@ -63,11 +63,13 @@ abstract class TestCase extends BaseTestCase
 
     protected function assertNoViolations(array $violations): void
     {
+        $violations = array_filter($violations, fn (Violation $v) => ! $v->silent);
         $this->assertCount(0, $violations, 'Expected no violations but found: '.print_r($violations, true));
     }
 
     protected function assertViolationCount(int $expected, array $violations): void
     {
+        $violations = array_values(array_filter($violations, fn (Violation $v) => ! $v->silent));
         $this->assertCount($expected, $violations, 'Violation count mismatch. Found: '.print_r($violations, true));
     }
 

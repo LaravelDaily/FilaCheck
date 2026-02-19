@@ -7,6 +7,7 @@ use Filacheck\Rules\DeprecatedActionFormRule;
 use Filacheck\Rules\DeprecatedBulkActionsRule;
 use Filacheck\Rules\DeprecatedEmptyLabelRule;
 use Filacheck\Rules\DeprecatedFilterFormRule;
+use Filacheck\Rules\DeprecatedFormsGetRule;
 use Filacheck\Rules\DeprecatedFormsSetRule;
 use Filacheck\Rules\DeprecatedImageColumnSizeRule;
 use Filacheck\Rules\DeprecatedMutateFormDataUsingRule;
@@ -39,6 +40,7 @@ class FilacheckServiceProvider extends ServiceProvider
             DeprecatedPlaceholderRule::class,
             DeprecatedMutateFormDataUsingRule::class,
             DeprecatedEmptyLabelRule::class,
+            DeprecatedFormsGetRule::class,
             DeprecatedFormsSetRule::class,
             DeprecatedImageColumnSizeRule::class,
             DeprecatedViewPropertyRule::class,

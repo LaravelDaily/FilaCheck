@@ -81,7 +81,7 @@ PHP;
 
     $violations = $this->scanCode(new WrongTabNamespaceRule, $code);
 
-    $this->assertViolationCount(2, $violations);
+    $this->assertViolationCount(1, $violations);
     $this->assertViolationContains('Tabs\Tab::make()', $violations);
 
     $fixedCode = $this->scanAndFix(new WrongTabNamespaceRule, $code);
@@ -108,8 +108,7 @@ PHP;
 
     $violations = $this->scanCode(new WrongTabNamespaceRule, $code);
 
-    $this->assertViolationCount(1, $violations);
-    $this->assertViolationContains('Missing import', $violations);
+    $this->assertNoViolations($violations);
 
     $fixedCode = $this->scanAndFix(new WrongTabNamespaceRule, $code);
 

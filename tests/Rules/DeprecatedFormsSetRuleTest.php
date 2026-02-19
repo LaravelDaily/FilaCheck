@@ -77,3 +77,82 @@ PHP;
     expect($fixedCode)->toContain('use Filament\Schemas\Components\Utilities\Set;');
     expect($fixedCode)->not->toContain('use Filament\Forms\Set;');
 });
+
+it('detects callable $set in a closure', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Schemas\Components\TextInput;
+
+class TestResource
+{
+    public function form(): array
+    {
+        return [
+            TextInput::make('name')
+                ->afterStateUpdated(function (callable $set) {
+                    $set('slug', 'value');
+                }),
+        ];
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedFormsSetRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+    $this->assertViolationContains('$set', $violations);
+});
+
+it('passes when Set type hint is used in closure', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\TextInput;
+
+class TestResource
+{
+    public function form(): array
+    {
+        return [
+            TextInput::make('name')
+                ->afterStateUpdated(function (Set $set) {
+                    $set('slug', 'value');
+                }),
+        ];
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedFormsSetRule, $code);
+
+    $this->assertNoViolations($violations);
+});
+
+it('fixes callable $set to Set $set and adds import', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Schemas\Components\TextInput;
+
+class TestResource
+{
+    public function form(): array
+    {
+        return [
+            TextInput::make('name')
+                ->afterStateUpdated(function (callable $set) {
+                    $set('slug', 'value');
+                }),
+        ];
+    }
+}
+PHP;
+
+    $fixedCode = $this->scanAndFix(new DeprecatedFormsSetRule, $code);
+
+    expect($fixedCode)->toContain('function (Set $set)');
+    expect($fixedCode)->not->toContain('callable $set');
+    expect($fixedCode)->toContain('use Filament\Schemas\Components\Utilities\Set;');
+});

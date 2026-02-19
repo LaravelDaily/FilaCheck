@@ -44,7 +44,7 @@ vendor/bin/filacheck --fix --backup
 
 ---
 
-## Available Rules (12 Free)
+## Available Rules (13 Free)
 
 FilaCheck includes the following rules for detecting deprecated code patterns and common issues:
 
@@ -55,7 +55,7 @@ FilaCheck includes the following rules for detecting deprecated code patterns an
 | `action-in-bulk-action-group` | Detects `Action::make()` inside `BulkActionGroup::make()` which should be `BulkAction::make()` | Yes |
 | `wrong-tab-namespace` | Detects wrong `Tab` namespace - should be `Filament\Schemas\Components\Tabs\Tab` | Yes |
 
-### Deprecated Code (10 rules)
+### Deprecated Code (11 rules)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
@@ -65,7 +65,8 @@ FilaCheck includes the following rules for detecting deprecated code patterns an
 | `deprecated-placeholder` | Detects `Placeholder::make()` which should be `TextEntry::make()->state()` | No |
 | `deprecated-mutate-form-data-using` | Detects `->mutateFormDataUsing()` which should be `->mutateDataUsing()` | Yes |
 | `deprecated-empty-label` | Detects `->label('')` which should be `->hiddenLabel()` (or `->iconButton()` on Actions) | Yes |
-| `deprecated-forms-set` | Detects `use Filament\Forms\Set` which should be `use Filament\Schemas\Components\Utilities\Set` | Yes |
+| `deprecated-forms-get` | Detects `use Filament\Forms\Get` or `callable $get` which should use `Filament\Schemas\Components\Utilities\Get` | Yes |
+| `deprecated-forms-set` | Detects `use Filament\Forms\Set` or `callable $set` which should use `Filament\Schemas\Components\Utilities\Set` | Yes |
 | `deprecated-image-column-size` | Detects `->size()` on ImageColumn which should be `->imageSize()` | Yes |
 | `deprecated-view-property` | Detects `$view` property not declared as `protected string` | Yes |
 | `deprecated-bulk-actions` | Detects `->bulkActions()` which should be replaced with `->toolbarActions()` | Yes |
