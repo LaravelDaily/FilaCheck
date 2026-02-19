@@ -27,7 +27,7 @@ PHP;
 
     $violations = $this->scanCode(new ActionInBulkActionGroupRule, $code);
 
-    $this->assertViolationCount(2, $violations);
+    $this->assertViolationCount(1, $violations);
     $this->assertViolationContains('Action::make()', $violations);
 });
 
@@ -86,7 +86,7 @@ PHP;
 
     $violations = $this->scanCode(new ActionInBulkActionGroupRule, $code);
 
-    $this->assertViolationCount(3, $violations);
+    $this->assertViolationCount(2, $violations);
 });
 
 it('ignores Action::make() outside toolbarActions', function () {
@@ -175,8 +175,7 @@ PHP;
 
     $violations = $this->scanCode(new ActionInBulkActionGroupRule, $code);
 
-    // 1 for Action::make('approve') + 1 for the import = 2
-    $this->assertViolationCount(2, $violations);
+    $this->assertViolationCount(1, $violations);
 });
 
 it('ignores Action::make() outside table method', function () {
@@ -334,7 +333,7 @@ PHP;
 
     $violations = $this->scanCode(new ActionInBulkActionGroupRule, $code);
 
-    $this->assertViolationCount(2, $violations);
+    $this->assertViolationCount(1, $violations);
     $this->assertViolationContains('Action::make()', $violations);
 });
 
@@ -390,6 +389,6 @@ PHP;
 
     $violations = $this->scanCode(new ActionInBulkActionGroupRule, $code);
 
-    $this->assertViolationCount(2, $violations);
+    $this->assertViolationCount(1, $violations);
     $this->assertViolationContains('Action::make()', $violations);
 });

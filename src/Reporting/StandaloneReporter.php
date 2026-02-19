@@ -20,6 +20,8 @@ class StandaloneReporter
      */
     public function report(array $rules, array $violations): void
     {
+        $violations = array_values(array_filter($violations, fn (Violation $v) => ! $v->silent));
+
         if ($this->verbose) {
             $this->reportVerbose($rules, $violations);
         } else {
@@ -146,6 +148,8 @@ class StandaloneReporter
      */
     public function reportWithFixes(array $rules, array $violations, array $fixResults): void
     {
+        $violations = array_values(array_filter($violations, fn (Violation $v) => ! $v->silent));
+
         $violationsByRule = [];
         foreach ($violations as $violation) {
             $violationsByRule[$violation->rule][] = $violation;

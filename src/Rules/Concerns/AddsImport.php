@@ -41,6 +41,7 @@ trait AddsImport
             startPos: $insertionPoint,
             endPos: $insertionPoint,
             replacement: $importStatement,
+            silent: true,
         );
     }
 }

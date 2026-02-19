@@ -15,5 +15,6 @@ class Violation
         public ?int $startPos = null,
         public ?int $endPos = null,
         public ?string $replacement = null,
+        public bool $silent = false,
     ) {}
 }

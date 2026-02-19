@@ -12,14 +12,14 @@ use PhpParser\Node\Expr\Closure;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Use_;
 
-class DeprecatedFormsSetRule implements FixableRule
+class DeprecatedFormsGetRule implements FixableRule
 {
     use AddsImport;
     use CalculatesLineNumbers;
 
     public function name(): string
     {
-        return 'deprecated-forms-set';
+        return 'deprecated-forms-get';
     }
 
     public function category(): RuleCategory
@@ -45,20 +45,20 @@ class DeprecatedFormsSetRule implements FixableRule
         $violations = [];
 
         foreach ($node->uses as $use) {
-            if ($use->name->toString() === 'Filament\Forms\Set') {
+            if ($use->name->toString() === 'Filament\Forms\Get') {
                 $startPos = $use->name->getStartFilePos();
                 $endPos = $use->name->getEndFilePos() + 1;
 
                 $violations[] = new Violation(
                     level: 'warning',
-                    message: 'The `Filament\Forms\Set` class namespace is deprecated.',
+                    message: 'The `Filament\Forms\Get` class namespace is deprecated.',
                     file: $context->file,
                     line: $this->getLineFromPosition($context->code, $startPos),
-                    suggestion: 'Use `Filament\Schemas\Components\Utilities\Set` instead of `Filament\Forms\Set`.',
+                    suggestion: 'Use `Filament\Schemas\Components\Utilities\Get` instead of `Filament\Forms\Get`.',
                     isFixable: true,
                     startPos: $startPos,
                     endPos: $endPos,
-                    replacement: 'Filament\Schemas\Components\Utilities\Set',
+                    replacement: 'Filament\Schemas\Components\Utilities\Get',
                 );
             }
         }
@@ -73,7 +73,7 @@ class DeprecatedFormsSetRule implements FixableRule
         foreach ($node->params as $param) {
             if (
                 $param->var instanceof Node\Expr\Variable
-                && $param->var->name === 'set'
+                && $param->var->name === 'get'
                 && $param->type instanceof Identifier
                 && $param->type->name === 'callable'
             ) {
@@ -82,18 +82,18 @@ class DeprecatedFormsSetRule implements FixableRule
 
                 $violations[] = new Violation(
                     level: 'warning',
-                    message: 'Parameter `$set` should be typed as `Set` instead of `callable`.',
+                    message: 'Parameter `$get` should be typed as `Get` instead of `callable`.',
                     file: $context->file,
                     line: $this->getLineFromPosition($context->code, $startPos),
-                    suggestion: 'Use `Filament\Schemas\Components\Utilities\Set $set` instead of `callable $set`.',
+                    suggestion: 'Use `Filament\Schemas\Components\Utilities\Get $get` instead of `callable $get`.',
                     isFixable: true,
                     startPos: $startPos,
                     endPos: $endPos,
-                    replacement: 'Set',
+                    replacement: 'Get',
                 );
 
                 $importViolation = $this->buildImportViolation(
-                    'use Filament\Schemas\Components\Utilities\Set;',
+                    'use Filament\Schemas\Components\Utilities\Get;',
                     $context,
                 );
 
