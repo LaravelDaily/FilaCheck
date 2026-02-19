@@ -107,7 +107,7 @@ This makes FilaCheck perfect for CI pipelines.
 
 ## [FilaCheck Pro](https://filamentexamples.com/filacheck)
 
-**FilaCheck Pro** adds 9 additional rules for performance optimization and best practices.
+**FilaCheck Pro** adds 11 additional rules for performance optimization and best practices.
 
 ### Performance Rules (4 rules)
 
@@ -118,7 +118,7 @@ This makes FilaCheck perfect for CI pipelines.
 | `table-missing-eager-loading` | Suggests enabling `Model::preventLazyLoading()` (or `Model::shouldBeStrict()`) in your `AppServiceProvider` to catch N+1 queries | No |
 | `large-option-list-searchable` | Suggests `->searchable()` for lists with 10+ options | No |
 
-### Best Practices Rules (5 rules)
+### Best Practices Rules (7 rules)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
@@ -127,6 +127,8 @@ This makes FilaCheck perfect for CI pipelines.
 | `deprecated-notification-action-namespace` | Detects deprecated `Filament\Notifications\Actions\Action` namespace - use `Filament\Actions\Action` instead | Yes |
 | `unnecessary-unique-ignore-record` | Detects `->unique(ignoreRecord: true)` which is now the default in Filament v4 | Yes |
 | `custom-theme-needed` | Detects Blade files using Tailwind CSS classes without a custom Filament theme configured | No |
+| `file-upload-missing-max-size` | Warns when `FileUpload` or `SpatieMediaLibraryFileUpload` is missing `maxSize()` | No |
+| `bulk-action-missing-deselect` | Warns when `BulkAction` is missing `deselectRecordsAfterCompletion()` | Yes |
 
 Get FilaCheck Pro at [filamentexamples.com/filacheck](https://filamentexamples.com/filacheck).
 
