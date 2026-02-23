@@ -44,7 +44,7 @@ vendor/bin/filacheck --fix --backup
 
 ---
 
-## Available Rules (13 Free)
+## Available Rules (14 Free)
 
 FilaCheck includes the following rules for detecting deprecated code patterns and common issues:
 
@@ -55,7 +55,7 @@ FilaCheck includes the following rules for detecting deprecated code patterns an
 | `action-in-bulk-action-group` | Detects `Action::make()` inside `BulkActionGroup::make()` which should be `BulkAction::make()` | Yes |
 | `wrong-tab-namespace` | Detects wrong `Tab` namespace - should be `Filament\Schemas\Components\Tabs\Tab` | Yes |
 
-### Deprecated Code (11 rules)
+### Deprecated Code (12 rules)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
@@ -70,6 +70,7 @@ FilaCheck includes the following rules for detecting deprecated code patterns an
 | `deprecated-image-column-size` | Detects `->size()` on ImageColumn which should be `->imageSize()` | Yes |
 | `deprecated-view-property` | Detects `$view` property not declared as `protected string` | Yes |
 | `deprecated-bulk-actions` | Detects `->bulkActions()` which should be replaced with `->toolbarActions()` | Yes |
+| `deprecated-url-parameters` | Detects deprecated URL parameters like `tableFilters`, `activeTab`, `tableSearch`, etc. | Yes |
 
 ---
 

@@ -13,6 +13,7 @@ use Filacheck\Rules\DeprecatedImageColumnSizeRule;
 use Filacheck\Rules\DeprecatedMutateFormDataUsingRule;
 use Filacheck\Rules\DeprecatedPlaceholderRule;
 use Filacheck\Rules\DeprecatedReactiveRule;
+use Filacheck\Rules\DeprecatedUrlParametersRule;
 use Filacheck\Rules\DeprecatedViewPropertyRule;
 use Filacheck\Rules\WrongTabNamespaceRule;
 use Filacheck\Support\RuleRegistry;
@@ -47,6 +48,7 @@ class FilacheckServiceProvider extends ServiceProvider
             ActionInBulkActionGroupRule::class,
             DeprecatedBulkActionsRule::class,
             WrongTabNamespaceRule::class,
+            DeprecatedUrlParametersRule::class,
         ];
     }
 }
