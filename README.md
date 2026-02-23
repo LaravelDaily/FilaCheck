@@ -108,7 +108,7 @@ This makes FilaCheck perfect for CI pipelines.
 
 ## [FilaCheck Pro](https://filamentexamples.com/filacheck)
 
-**FilaCheck Pro** adds 11 additional rules for performance optimization and best practices.
+**FilaCheck Pro** adds 13 additional rules for performance optimization, security, and best practices.
 
 ### Performance Rules (4 rules)
 
@@ -118,6 +118,13 @@ This makes FilaCheck perfect for CI pipelines.
 | `table-defer-loading` | Suggests adding `->deferLoading()` to tables | No |
 | `table-missing-eager-loading` | Suggests enabling `Model::preventLazyLoading()` (or `Model::shouldBeStrict()`) in your `AppServiceProvider` to catch N+1 queries | No |
 | `large-option-list-searchable` | Suggests `->searchable()` for lists with 10+ options | No |
+
+### Security Rules (2 rules)
+
+| Rule | Description | Fixable |
+|------|-------------|---------|
+| `file-upload-missing-accepted-file-types` | Warns when `FileUpload` or `SpatieMediaLibraryFileUpload` is missing `acceptedFileTypes()` or `image()` | No |
+| `action-missing-authorization` | Warns when `Action`, `BulkAction`, `ImportAction`, or `ExportAction` is missing `hidden()`, `visible()`, or `authorize()` | No |
 
 ### Best Practices Rules (7 rules)
 
