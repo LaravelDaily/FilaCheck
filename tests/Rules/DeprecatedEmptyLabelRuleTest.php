@@ -274,3 +274,72 @@ PHP;
     expect($fixedCode)->not->toContain("->label('')");
     expect($fixedCode)->not->toContain('->hiddenLabel()');
 });
+
+it('suggests iconButton for $this->label(\'\') in a class extending Action', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Actions\Action;
+
+class SendEmail extends Action
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->icon('heroicon-m-pencil')
+            ->label('');
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedEmptyLabelRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+    expect($violations[0]->suggestion)->toContain('iconButton()');
+});
+
+it('skips $this->label(\'\') in a class extending a Column', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Tables\Columns\TextColumn;
+
+class StatusColumn extends TextColumn
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->label('');
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedEmptyLabelRule, $code);
+
+    $this->assertNoViolations($violations);
+});
+
+it('suggests hiddenLabel for $this->label(\'\') in a class extending a form field', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Forms\Components\TextInput;
+
+class EmailInput extends TextInput
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->label('');
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedEmptyLabelRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+    expect($violations[0]->suggestion)->toContain('hiddenLabel()');
+});

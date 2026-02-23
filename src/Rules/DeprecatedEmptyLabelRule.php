@@ -9,6 +9,7 @@ use Filacheck\Support\Violation;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Scalar\String_;
@@ -55,7 +56,7 @@ class DeprecatedEmptyLabelRule implements FixableRule
         }
 
         // Skip Table Columns - they don't have hiddenLabel() method
-        if ($this->isTableColumn($node)) {
+        if ($this->isTableColumn($node, $context)) {
             return [];
         }
 
@@ -66,7 +67,7 @@ class DeprecatedEmptyLabelRule implements FixableRule
         $endPos = $node->getEndFilePos() + 1;
 
         // Use iconButton() for Actions, hiddenLabel() for everything else
-        if ($this->isAction($node)) {
+        if ($this->isAction($node, $context)) {
             return [
                 new Violation(
                     level: 'warning',
@@ -100,9 +101,9 @@ class DeprecatedEmptyLabelRule implements FixableRule
     /**
      * Check if the method chain originates from a Table Column class.
      */
-    private function isTableColumn(MethodCall $node): bool
+    private function isTableColumn(MethodCall $node, Context $context): bool
     {
-        $rootClass = $this->getRootClassName($node);
+        $rootClass = $this->getRootClassName($node, $context);
 
         if ($rootClass === null) {
             return false;
@@ -117,9 +118,9 @@ class DeprecatedEmptyLabelRule implements FixableRule
     /**
      * Check if the method chain originates from an Action class.
      */
-    private function isAction(MethodCall $node): bool
+    private function isAction(MethodCall $node, Context $context): bool
     {
-        $rootClass = $this->getRootClassName($node);
+        $rootClass = $this->getRootClassName($node, $context);
 
         if ($rootClass === null) {
             return false;
@@ -132,9 +133,9 @@ class DeprecatedEmptyLabelRule implements FixableRule
     }
 
     /**
-     * Traverse up the method chain to find the root static call class name.
+     * Traverse up the method chain to find the root class name.
      */
-    private function getRootClassName(Node $node): ?string
+    private function getRootClassName(Node $node, Context $context): ?string
     {
         $current = $node;
 
@@ -144,6 +145,12 @@ class DeprecatedEmptyLabelRule implements FixableRule
 
         if ($current instanceof StaticCall && $current->class instanceof Name) {
             return $current->class->toString();
+        }
+
+        if ($current instanceof Variable && $current->name === 'this') {
+            if (preg_match('/class\s+\w+\s+extends\s+(\w+)/', $context->code, $matches)) {
+                return $matches[1];
+            }
         }
 
         return null;

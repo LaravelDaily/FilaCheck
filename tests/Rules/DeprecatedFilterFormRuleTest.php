@@ -137,3 +137,97 @@ PHP;
     expect($fixedCode)->toContain('->schema([])');
     expect($fixedCode)->not->toContain('->form([])');
 });
+
+it('detects $this->form() in a class extending Filter', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Tables\Filters\Filter;
+
+class StatusFilter extends Filter
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->form([
+            Select::make('value'),
+        ]);
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedFilterFormRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+    $this->assertViolationContains('form()', $violations);
+});
+
+it('detects $this->query()->form() chained in a class extending SelectFilter', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Tables\Filters\SelectFilter;
+
+class StatusFilter extends SelectFilter
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->query(fn () => null)
+            ->form([
+                Select::make('value'),
+            ]);
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedFilterFormRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+    $this->assertViolationContains('form()', $violations);
+});
+
+it('ignores $this->form() in a class that does not extend a filter class', function () {
+    $code = <<<'PHP'
+<?php
+
+class SomeComponent extends Component
+{
+    protected function setUp(): void
+    {
+        $this->form([]);
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedFilterFormRule, $code);
+
+    $this->assertNoViolations($violations);
+});
+
+it('fixes $this->form() to $this->schema() in custom filter classes', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Tables\Filters\Filter;
+
+class StatusFilter extends Filter
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->form([
+            Select::make('value'),
+        ]);
+    }
+}
+PHP;
+
+    $fixedCode = $this->scanAndFix(new DeprecatedFilterFormRule, $code);
+
+    expect($fixedCode)->toContain('$this->schema([');
+    expect($fixedCode)->not->toContain('$this->form([');
+});

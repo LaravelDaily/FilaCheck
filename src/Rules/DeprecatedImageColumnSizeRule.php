@@ -9,6 +9,7 @@ use Filacheck\Support\Violation;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 
@@ -39,7 +40,7 @@ class DeprecatedImageColumnSizeRule implements FixableRule
             return [];
         }
 
-        if (! $this->isImageColumnChain($node)) {
+        if (! $this->isImageColumnContext($node, $context)) {
             return [];
         }
 
@@ -62,7 +63,7 @@ class DeprecatedImageColumnSizeRule implements FixableRule
         ];
     }
 
-    private function isImageColumnChain(MethodCall $node): bool
+    private function isImageColumnContext(MethodCall $node, Context $context): bool
     {
         $current = $node->var;
 
@@ -76,6 +77,19 @@ class DeprecatedImageColumnSizeRule implements FixableRule
             return end($parts) === 'ImageColumn';
         }
 
+        if ($current instanceof Variable && $current->name === 'this') {
+            return $this->isInsideImageColumnClass($context);
+        }
+
         return false;
+    }
+
+    private function isInsideImageColumnClass(Context $context): bool
+    {
+        if (! preg_match('/class\s+\w+\s+extends\s+(\w+)/', $context->code, $matches)) {
+            return false;
+        }
+
+        return $matches[1] === 'ImageColumn';
     }
 }
