@@ -33,6 +33,11 @@ if (! $autoloaded) {
     exit(1);
 }
 
+function isAbsolutePath(string $path): bool
+{
+    return str_starts_with($path, '/') || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
+}
+
 $output = new ConsoleOutput();
 
 // Parse arguments
@@ -94,12 +99,12 @@ if ($showHelp) {
 
 // Default path
 if ($path === null) {
-    $path = getcwd().'/app/Filament';
+    $path = getcwd().DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'Filament';
 }
 
 // Make relative paths absolute
-if (! str_starts_with($path, '/')) {
-    $path = getcwd().'/'.$path;
+if (! isAbsolutePath($path)) {
+    $path = getcwd().DIRECTORY_SEPARATOR.$path;
 }
 
 if (! is_dir($path)) {
@@ -131,7 +136,7 @@ $violations = $scanner->scan($path, getcwd());
 $hasBladeRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof BladeRule);
 
 if (! empty($hasBladeRules)) {
-    $bladeDir = getcwd().'/resources/views/filament';
+    $bladeDir = getcwd().DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'views'.DIRECTORY_SEPARATOR.'filament';
     $bladeViolations = $scanner->scanBladeFiles($bladeDir, getcwd());
     $violations = array_merge($violations, $bladeViolations);
 }
