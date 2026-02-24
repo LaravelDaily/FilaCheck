@@ -9,6 +9,7 @@ use Filacheck\Support\Violation;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 
@@ -46,7 +47,7 @@ class DeprecatedFilterFormRule implements FixableRule
             return [];
         }
 
-        if (! $this->isFilterMakeChain($node)) {
+        if (! $this->isFilterContext($node, $context)) {
             return [];
         }
 
@@ -69,7 +70,7 @@ class DeprecatedFilterFormRule implements FixableRule
         ];
     }
 
-    private function isFilterMakeChain(MethodCall $node): bool
+    private function isFilterContext(MethodCall $node, Context $context): bool
     {
         $current = $node->var;
 
@@ -77,17 +78,30 @@ class DeprecatedFilterFormRule implements FixableRule
             $current = $current->var;
         }
 
-        if (! $current instanceof StaticCall) {
+        if ($current instanceof StaticCall) {
+            if (! $current->class instanceof Name) {
+                return false;
+            }
+
+            $className = $current->class->toString();
+            $shortName = class_basename($className);
+
+            return in_array($shortName, self::FILTER_CLASSES);
+        }
+
+        if ($current instanceof Variable && $current->name === 'this') {
+            return $this->isInsideFilterClass($context);
+        }
+
+        return false;
+    }
+
+    private function isInsideFilterClass(Context $context): bool
+    {
+        if (! preg_match('/class\s+\w+\s+extends\s+(\w+)/', $context->code, $matches)) {
             return false;
         }
 
-        if (! $current->class instanceof Name) {
-            return false;
-        }
-
-        $className = $current->class->toString();
-        $shortName = class_basename($className);
-
-        return in_array($shortName, self::FILTER_CLASSES);
+        return in_array($matches[1], self::FILTER_CLASSES);
     }
 }

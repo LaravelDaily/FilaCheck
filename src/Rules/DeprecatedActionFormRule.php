@@ -9,6 +9,7 @@ use Filacheck\Support\Violation;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 
@@ -54,7 +55,7 @@ class DeprecatedActionFormRule implements FixableRule
             return [];
         }
 
-        if (! $this->isActionMakeChain($node)) {
+        if (! $this->isActionContext($node, $context)) {
             return [];
         }
 
@@ -77,7 +78,7 @@ class DeprecatedActionFormRule implements FixableRule
         ];
     }
 
-    private function isActionMakeChain(MethodCall $node): bool
+    private function isActionContext(MethodCall $node, Context $context): bool
     {
         $current = $node->var;
 
@@ -85,17 +86,30 @@ class DeprecatedActionFormRule implements FixableRule
             $current = $current->var;
         }
 
-        if (! $current instanceof StaticCall) {
+        if ($current instanceof StaticCall) {
+            if (! $current->class instanceof Name) {
+                return false;
+            }
+
+            $className = $current->class->toString();
+            $shortName = class_basename($className);
+
+            return in_array($shortName, self::ACTION_CLASSES);
+        }
+
+        if ($current instanceof Variable && $current->name === 'this') {
+            return $this->isInsideActionClass($context);
+        }
+
+        return false;
+    }
+
+    private function isInsideActionClass(Context $context): bool
+    {
+        if (! preg_match('/class\s+\w+\s+extends\s+(\w+)/', $context->code, $matches)) {
             return false;
         }
 
-        if (! $current->class instanceof Name) {
-            return false;
-        }
-
-        $className = $current->class->toString();
-        $shortName = class_basename($className);
-
-        return in_array($shortName, self::ACTION_CLASSES);
+        return in_array($matches[1], self::ACTION_CLASSES);
     }
 }
