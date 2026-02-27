@@ -35,6 +35,9 @@ FilaCheck can automatically fix many issues it detects:
 # Fix issues automatically
 vendor/bin/filacheck --fix
 
+# Preview suggested fixes without modifying files
+vendor/bin/filacheck --fix --dry-run
+
 # Fix with backup files (creates .bak files before modifying)
 vendor/bin/filacheck --fix --backup
 ```
