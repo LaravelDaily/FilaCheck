@@ -6,6 +6,7 @@ use Filacheck\Rules\BladeRule;
 use Filacheck\Rules\Rule;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
+use PhpParser\Node;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\NodeVisitorAbstract;
@@ -14,6 +15,7 @@ use PhpParser\ParserFactory;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use Throwable;
 
 class ResourceScanner
 {
@@ -45,10 +47,10 @@ class ResourceScanner
     /**
      * @return Violation[]
      */
-    public function scan(string $directory, ?string $basePath = null): array
+    public function scan(string $path, ?string $basePath = null): array
     {
         $violations = [];
-        $files = $this->findPhpFiles($directory);
+        $files = $this->findPhpFiles($path);
 
         foreach ($files as $file) {
             $fileViolations = $this->scanFile($file, $basePath);
@@ -118,15 +120,23 @@ class ResourceScanner
     /**
      * @return SplFileInfo[]
      */
-    private function findPhpFiles(string $directory): array
+    private function findPhpFiles(string $path): array
     {
-        if (! is_dir($directory)) {
+        if (is_file($path)) {
+            if (pathinfo($path, PATHINFO_EXTENSION) === 'php') {
+                return [new SplFileInfo($path)];
+            }
+
+            return [];
+        }
+
+        if (! is_dir($path)) {
             return [];
         }
 
         $files = [];
         $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($directory)
+            new RecursiveDirectoryIterator($path)
         );
 
         foreach ($iterator as $file) {
@@ -159,7 +169,7 @@ class ResourceScanner
 
         try {
             $ast = $this->parser->parse($code);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return [];
         }
 
@@ -180,7 +190,7 @@ class ResourceScanner
                 private array &$violations,
             ) {}
 
-            public function enterNode(\PhpParser\Node $node): ?int
+            public function enterNode(Node $node): ?int
             {
                 foreach ($this->rules as $rule) {
                     $ruleViolations = $rule->check($node, $this->context);

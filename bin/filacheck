@@ -79,7 +79,7 @@ if ($showHelp) {
     $output->writeln('  filacheck [path] [options]');
     $output->writeln('');
     $output->writeln('<fg=yellow>Arguments:</>');
-    $output->writeln('  path                  Directory to scan (default: app/Filament)');
+    $output->writeln('  path                  Directory or file to scan (default: app/Filament)');
     $output->writeln('');
     $output->writeln('<fg=yellow>Options:</>');
     $output->writeln('  -d, --detailed        Show detailed output with rule categories');
@@ -91,6 +91,7 @@ if ($showHelp) {
     $output->writeln('<fg=yellow>Examples:</>');
     $output->writeln('  filacheck                           Scan app/Filament directory');
     $output->writeln('  filacheck app/Filament/Resources    Scan specific directory');
+    $output->writeln('  filacheck app/Filament/Resources/UserResource.php    Scan specific file');
     $output->writeln('  filacheck --detailed                Show detailed report');
     $output->writeln('  filacheck --fix                     Auto-fix issues');
     $output->writeln('  filacheck --fix --backup            Auto-fix with backups');
@@ -107,8 +108,8 @@ if (! isAbsolutePath($path)) {
     $path = getcwd().DIRECTORY_SEPARATOR.$path;
 }
 
-if (! is_dir($path)) {
-    $output->writeln("<fg=red>Error:</> Directory not found: {$path}");
+if (! is_dir($path) && ! is_file($path)) {
+    $output->writeln("<fg=red>Error:</> Path not found: {$path}");
     exit(1);
 }
 
