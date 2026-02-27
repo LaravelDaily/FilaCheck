@@ -154,6 +154,84 @@ it('does not create backup files by default', function () {
     expect(file_exists($file.'.bak'))->toBeFalse();
 });
 
+it('does not modify files during dry run', function () {
+    $file = $this->tempDir.'/test.php';
+    $content = '<?php $input->reactive();';
+    file_put_contents($file, $content);
+
+    $violations = [
+        new Violation(
+            level: 'warning',
+            message: 'Test violation',
+            file: $file,
+            line: 1,
+            isFixable: true,
+            startPos: 14,
+            endPos: 22,
+            replacement: 'live',
+        ),
+    ];
+
+    $fixer = new CodeFixer;
+    $results = $fixer->fix($violations, dryRun: true);
+
+    expect($results['fixed'])->toBe(1);
+    expect($results['dryRun'])->toBeTrue();
+    expect(file_get_contents($file))->toBe($content);
+});
+
+it('returns change previews during dry run', function () {
+    $file = $this->tempDir.'/test.php';
+    file_put_contents($file, '<?php $input->reactive();');
+
+    $violations = [
+        new Violation(
+            level: 'warning',
+            message: 'Test violation',
+            file: $file,
+            line: 1,
+            isFixable: true,
+            startPos: 14,
+            endPos: 22,
+            replacement: 'live',
+        ),
+    ];
+
+    $fixer = new CodeFixer;
+    $results = $fixer->fix($violations, dryRun: true);
+
+    expect($results['previews'])->toHaveKey($file)
+        ->and($results['previews'][$file])->toHaveCount(1)
+        ->and($results['previews'][$file][0]['line'])->toBe(1)
+        ->and($results['previews'][$file][0]['from'])->toBe('reactive')
+        ->and($results['previews'][$file][0]['to'])->toBe('live');
+});
+
+it('does not create backup files during dry run', function () {
+    $file = $this->tempDir.'/test.php';
+    $content = '<?php $input->reactive();';
+    file_put_contents($file, $content);
+
+    $violations = [
+        new Violation(
+            level: 'warning',
+            message: 'Test violation',
+            file: $file,
+            line: 1,
+            isFixable: true,
+            startPos: 14,
+            endPos: 22,
+            replacement: 'live',
+        ),
+    ];
+
+    $fixer = new CodeFixer;
+    $fixer->fix($violations, createBackup: true, dryRun: true);
+
+    expect(file_exists($file.'.bak'))->toBeFalse();
+    expect(file_get_contents($file))->toBe($content);
+});
+
 it('handles multiple files', function () {
     $file1 = $this->tempDir.'/test1.php';
     $file2 = $this->tempDir.'/test2.php';
