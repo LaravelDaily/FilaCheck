@@ -108,15 +108,13 @@ This makes FilaCheck perfect for CI pipelines.
 
 ## [FilaCheck Pro](https://filamentexamples.com/filacheck)
 
-**FilaCheck Pro** adds 13 additional rules for performance optimization, security, and best practices.
+**FilaCheck Pro** adds 16 additional rules for performance optimization, security, best practices, and UX suggestions.
 
-### Performance Rules (4 rules)
+### Performance Rules (2 rules)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
 | `too-many-columns` | Warns when tables have more than 10 columns | No |
-| `table-defer-loading` | Suggests adding `->deferLoading()` to tables | No |
-| `table-missing-eager-loading` | Suggests enabling `Model::preventLazyLoading()` (or `Model::shouldBeStrict()`) in your `AppServiceProvider` to catch N+1 queries | No |
 | `large-option-list-searchable` | Suggests `->searchable()` for lists with 10+ options | No |
 
 ### Security Rules (2 rules)
@@ -126,7 +124,7 @@ This makes FilaCheck perfect for CI pipelines.
 | `file-upload-missing-accepted-file-types` | Warns when `FileUpload` or `SpatieMediaLibraryFileUpload` is missing `acceptedFileTypes()` or `image()` | No |
 | `action-missing-authorization` | Warns when `Action`, `BulkAction`, `ImportAction`, or `ExportAction` is missing `hidden()`, `visible()`, or `authorize()` | No |
 
-### Best Practices Rules (7 rules)
+### Best Practices Rules (8 rules)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
@@ -137,6 +135,16 @@ This makes FilaCheck perfect for CI pipelines.
 | `custom-theme-needed` | Detects Blade files using Tailwind CSS classes without a custom Filament theme configured | No |
 | `file-upload-missing-max-size` | Warns when `FileUpload` or `SpatieMediaLibraryFileUpload` is missing `maxSize()` | No |
 | `bulk-action-missing-deselect` | Warns when `BulkAction` is missing `deselectRecordsAfterCompletion()` | Yes |
+| `enum-missing-filament-interfaces` | Warns when enums cast in Eloquent models are missing Filament interfaces like `HasLabel` | No |
+
+### UX Suggestions Rules (4 rules)
+
+| Rule | Description | Fixable |
+|------|-------------|---------|
+| `flat-form-overload` | Warns when form schema has more than 8 fields without any layout grouping (Sections, Tabs, Fieldsets, etc.) | No |
+| `relationship-select-not-searchable` | Warns when `Select` with `relationship()` is missing `searchable()` | No |
+| `missing-table-filters` | Warns when table has filterable columns (boolean, badge, icon) but no filters defined | No |
+| `table-without-searchable-columns` | Warns when table has text columns but none are searchable | No |
 
 Get FilaCheck Pro at [filamentexamples.com/filacheck](https://filamentexamples.com/filacheck).
 
