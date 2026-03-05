@@ -1,5 +1,6 @@
 <?php
 
+use Filacheck\FilacheckServiceProvider;
 use Filacheck\Rules\DeprecatedReactiveRule;
 use Filacheck\Support\RuleRegistry;
 
@@ -52,13 +53,17 @@ it('supports chained registration', function () {
 });
 
 it('registers all rules from FilacheckServiceProvider', function () {
-    $rules = \Filacheck\FilacheckServiceProvider::rules();
+    $rules = FilacheckServiceProvider::rules();
 
     expect($rules)
         ->toBeArray()
         ->toEqual([
             DeprecatedReactiveRule::class,
             \Filacheck\Rules\DeprecatedActionFormRule::class,
+            \Filacheck\Rules\DeprecatedActionAssertsRule::class,
+            \Filacheck\Rules\DeprecatedTableAssertsRule::class,
+            \Filacheck\Rules\DeprecatedFormAssertsRule::class,
+            \Filacheck\Rules\DeprecatedInfolistAssertsRule::class,
             \Filacheck\Rules\DeprecatedFilterFormRule::class,
             \Filacheck\Rules\DeprecatedPlaceholderRule::class,
             \Filacheck\Rules\DeprecatedMutateFormDataUsingRule::class,
@@ -71,5 +76,5 @@ it('registers all rules from FilacheckServiceProvider', function () {
             \Filacheck\Rules\DeprecatedBulkActionsRule::class,
             \Filacheck\Rules\WrongTabNamespaceRule::class,
             \Filacheck\Rules\DeprecatedUrlParametersRule::class,
-    ]);
+        ]);
 });
