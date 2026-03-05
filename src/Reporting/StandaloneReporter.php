@@ -91,6 +91,16 @@ class StandaloneReporter
         }
 
         foreach ($groupedByFile as $file => $fileViolations) {
+            usort($fileViolations, function (Violation $left, Violation $right): int {
+                $lineComparison = $left->line <=> $right->line;
+
+                if ($lineComparison !== 0) {
+                    return $lineComparison;
+                }
+
+                return ($left->startPos ?? 0) <=> ($right->startPos ?? 0);
+            });
+
             $this->output->writeln("  <fg=gray>{$file}</>");
 
             foreach ($fileViolations as $violation) {
@@ -141,7 +151,7 @@ class StandaloneReporter
 
         $rulesSummary = "<fg=green>{$passCount} passed</>, <fg=red>{$failCount} failed</>";
         $this->output->writeln("Rules: {$rulesSummary}");
-        $this->output->writeln('Issues: '.implode(', ', $summary));
+        $this->output->writeln('Issues: ' . implode(', ', $summary));
     }
 
     /**
@@ -245,7 +255,6 @@ class StandaloneReporter
 
         foreach ($groupedByFile as $file => $fileViolations) {
             $this->output->writeln("  <fg=gray>{$file}</>");
-            $isFirstFixableViolationInFile = true;
 
             foreach ($fileViolations as $violation) {
                 if ($violation->isFixable) {
@@ -273,11 +282,7 @@ class StandaloneReporter
                 }
 
                 if ($this->isDryRun && $violation->isFixable) {
-                    $previewChanges = $this->consumePreviewChanges(
-                        $violation->file,
-                        $violation->line,
-                        includeRemainingForFile: $isFirstFixableViolationInFile
-                    );
+                    $previewChanges = $this->consumePreviewChanges($violation->file, $violation->line);
 
                     usort($previewChanges, function (array $left, array $right): int {
                         $lineComparison = $left['line'] <=> $right['line'];
@@ -299,9 +304,29 @@ class StandaloneReporter
                         }
                     }
                 }
+            }
 
-                if ($violation->isFixable) {
-                    $isFirstFixableViolationInFile = false;
+            if ($this->isDryRun) {
+                $remainingPreviewChanges = $this->consumeRemainingPreviewChanges($file);
+
+                usort($remainingPreviewChanges, function (array $left, array $right): int {
+                    $lineComparison = $left['line'] <=> $right['line'];
+
+                    if ($lineComparison !== 0) {
+                        return $lineComparison;
+                    }
+
+                    return $left['column'] <=> $right['column'];
+                });
+
+                if (count($remainingPreviewChanges) > 0) {
+                    $this->output->writeln('      <fg=gray>Additional proposed file changes:</>');
+
+                    foreach ($remainingPreviewChanges as $change) {
+                        $this->output->writeln("        <fg=gray>@@ line {$change['line']} @@</>");
+
+                        $this->renderDryRunDiffLines($file, $change);
+                    }
                 }
             }
         }
@@ -405,7 +430,7 @@ class StandaloneReporter
             $summary[] = "<fg=yellow>{$warningCount} warning(s)</>";
         }
 
-        $this->output->writeln('Found '.implode(' and ', $summary).'.');
+        $this->output->writeln('Found ' . implode(' and ', $summary) . '.');
     }
 
     /**

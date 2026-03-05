@@ -28,14 +28,14 @@ trait HandlesDryRunPreviews
     /**
      * @return array<int, array{line: int, column: int, from: string, to: string}>
      */
-    protected function consumePreviewChanges(string $file, int $line, bool $includeRemainingForFile): array
+    protected function consumePreviewChanges(string $file, int $line): array
     {
         $allFileChanges = $this->previewsByFile[$file] ?? [];
         $consumedIndexes = $this->consumedPreviewIndexes[$file] ?? [];
         $changes = [];
 
         foreach ($allFileChanges as $index => $change) {
-            if (($consumedIndexes[$index] ?? false) || $change['line'] !== $line) {
+            if (($consumedIndexes[$index] ?? false) || $change['line'] > $line) {
                 continue;
             }
 
@@ -43,20 +43,32 @@ trait HandlesDryRunPreviews
             $consumedIndexes[$index] = true;
         }
 
-        if ($includeRemainingForFile) {
-            foreach ($allFileChanges as $index => $change) {
-                if ($consumedIndexes[$index] ?? false) {
-                    continue;
-                }
+        $this->consumedPreviewIndexes[$file] = $consumedIndexes;
 
-                $changes[] = $change;
-                $consumedIndexes[$index] = true;
+        return $changes;
+    }
+
+    /**
+     * @return array<int, array{line: int, column: int, from: string, to: string}>
+     */
+    protected function consumeRemainingPreviewChanges(string $file): array
+    {
+        $allFileChanges = $this->previewsByFile[$file] ?? [];
+        $consumedIndexes = $this->consumedPreviewIndexes[$file] ?? [];
+        $remainingChanges = [];
+
+        foreach ($allFileChanges as $index => $change) {
+            if ($consumedIndexes[$index] ?? false) {
+                continue;
             }
+
+            $remainingChanges[] = $change;
+            $consumedIndexes[$index] = true;
         }
 
         $this->consumedPreviewIndexes[$file] = $consumedIndexes;
 
-        return $changes;
+        return $remainingChanges;
     }
 
     protected function getFileLine(string $file, int $lineNumber): ?string
