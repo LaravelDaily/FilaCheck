@@ -109,22 +109,32 @@ if ($dryRun) {
     $fix = true;
 }
 
-// Default path
+$paths = [];
+
 if ($path === null) {
-    $path = getcwd().DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'Filament';
+    // Default paths
+    $paths[] = getcwd().DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'Filament';
+
+    // Include test directories if they exist
+    $testPaths = array_filter([
+        getcwd() . DIRECTORY_SEPARATOR . 'tests',
+        getcwd() . DIRECTORY_SEPARATOR . 'test',
+    ], fn ($path) => is_dir($path) || is_file($path));
+
+    $paths = array_merge($paths, $testPaths);
+} else {
+    $paths[] = isAbsolutePath($path) ? $path : getcwd().DIRECTORY_SEPARATOR.$path;
 }
 
-// Make relative paths absolute
-if (! isAbsolutePath($path)) {
-    $path = getcwd().DIRECTORY_SEPARATOR.$path;
+foreach ($paths as $path) {
+    if (! is_dir($path) && ! is_file($path)) {
+        $output->writeln("<fg=red>Error:</> Path not found: {$path}");
+        exit(1);
+    }
 }
 
-if (! is_dir($path) && ! is_file($path)) {
-    $output->writeln("<fg=red>Error:</> Path not found: {$path}");
-    exit(1);
-}
 
-$output->writeln("Scanning: <fg=gray>{$path}</>");
+$output->writeln('Scanning: <fg=gray>'.implode(', ', $paths).'</>');
 $output->writeln('');
 
 $scanner = new ResourceScanner();
@@ -143,7 +153,11 @@ foreach ($registry->all() as $rule) {
     $scanner->addRule($rule);
 }
 
-$violations = $scanner->scan($path, getcwd());
+$violations = [];
+foreach ($paths as $path) {
+    $scanViolations = $scanner->scan($path, getcwd());
+    $violations = array_merge($violations, $scanViolations);
+}
 
 // Extra paths from rules (e.g., app/Models for enum rules)
 $extraPathRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof ExtraPathRule);
