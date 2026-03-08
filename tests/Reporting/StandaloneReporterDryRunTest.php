@@ -323,3 +323,76 @@ it('sorts multiple diffs by line number', function () {
             ->and($lineTwelvePosition)->toBeLessThan($lineSeventyEightPosition);
     });
 });
+
+it('keeps each proposed diff with its own violation when violations are reported out of order', function () {
+    withTempDir(function (string $tempDir) {
+        $file = $tempDir . '/OutOfOrderViolations.php';
+        writeFileWithLines($file, 120);
+
+        $rule = createRule('dry-run-out-of-order');
+        $violations = [
+            new Violation(
+                level: 'warning',
+                message: 'Manual fix later in the file.',
+                file: $file,
+                line: 100,
+                suggestion: 'Apply the manual fix.',
+                rule: $rule->name(),
+                isFixable: false,
+            ),
+            new Violation(
+                level: 'warning',
+                message: 'Fixable issue on line 99.',
+                file: $file,
+                line: 99,
+                suggestion: 'Apply the fix on line 99.',
+                rule: $rule->name(),
+                isFixable: true,
+                startPos: 990,
+                endPos: 996,
+                replacement: 'fixed99',
+            ),
+            new Violation(
+                level: 'warning',
+                message: 'Fixable issue on line 98.',
+                file: $file,
+                line: 98,
+                suggestion: 'Apply the fix on line 98.',
+                rule: $rule->name(),
+                isFixable: true,
+                startPos: 980,
+                endPos: 986,
+                replacement: 'fixed98',
+            ),
+        ];
+
+        $output = renderDryRunOutput(
+            rules: [$rule],
+            violations: $violations,
+            previews: [
+                $file => [
+                    ['line' => 99, 'column' => 1, 'from' => 'line 99', 'to' => 'line 99 updated'],
+                    ['line' => 98, 'column' => 1, 'from' => 'line 98', 'to' => 'line 98 updated'],
+                ],
+            ],
+            byFile: [$file => ['fixed' => 2, 'skipped' => 1]],
+        );
+
+        $line98MessagePosition = strpos($output, 'Line 98: Fixable issue on line 98. (proposed)');
+        $line98DiffPosition = strpos($output, '@@ line 98 @@');
+        $line99MessagePosition = strpos($output, 'Line 99: Fixable issue on line 99. (proposed)');
+        $line99DiffPosition = strpos($output, '@@ line 99 @@');
+        $line100MessagePosition = strpos($output, 'Line 100: Manual fix later in the file. (manual fix required)');
+
+        expect(substr_count($output, 'Proposed file changes:'))->toBe(2)
+            ->and($line98MessagePosition)->not->toBeFalse()
+            ->and($line98DiffPosition)->not->toBeFalse()
+            ->and($line99MessagePosition)->not->toBeFalse()
+            ->and($line99DiffPosition)->not->toBeFalse()
+            ->and($line100MessagePosition)->not->toBeFalse()
+            ->and($line98MessagePosition)->toBeLessThan($line98DiffPosition)
+            ->and($line98DiffPosition)->toBeLessThan($line99MessagePosition)
+            ->and($line99MessagePosition)->toBeLessThan($line99DiffPosition)
+            ->and($line99DiffPosition)->toBeLessThan($line100MessagePosition);
+    });
+});

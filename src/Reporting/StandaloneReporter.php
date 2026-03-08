@@ -254,6 +254,16 @@ class StandaloneReporter
         }
 
         foreach ($groupedByFile as $file => $fileViolations) {
+            usort($fileViolations, function (Violation $left, Violation $right): int {
+                $lineComparison = $left->line <=> $right->line;
+
+                if ($lineComparison !== 0) {
+                    return $lineComparison;
+                }
+
+                return ($left->startPos ?? 0) <=> ($right->startPos ?? 0);
+            });
+
             $this->output->writeln("  <fg=gray>{$file}</>");
 
             foreach ($fileViolations as $violation) {
