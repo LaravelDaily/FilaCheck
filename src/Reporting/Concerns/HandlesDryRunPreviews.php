@@ -97,6 +97,12 @@ trait HandlesDryRunPreviews
         $from = $change['from'];
         $to = $change['to'];
 
+        if (str_contains($from, "\n") || str_contains($to, "\n")) {
+            $this->renderMultilineDryRunDiffLines($trimmedCurrentLine, $column, $from, $to);
+
+            return;
+        }
+
         if ($from !== '') {
             $oldLine = $this->colorizeLineWithHighlight($trimmedCurrentLine, $column, $from, 'red');
             $this->output->writeln("        <fg=red>-</> {$oldLine}");
@@ -119,6 +125,41 @@ trait HandlesDryRunPreviews
         $newLine = $this->buildNewLine($trimmedCurrentLine, $column, $from, $to);
         $newLine = $this->colorizeLineWithHighlight($newLine, $column, $to, 'green');
         $this->output->writeln("        <fg=green>+</> {$newLine}");
+    }
+
+    private function renderMultilineDryRunDiffLines(string $currentLine, int $column, string $from, string $to): void
+    {
+        $prefix = substr($currentLine, 0, max(0, $column - 1));
+        $fromLines = $this->prepareMultilinePreviewLines($from, $prefix);
+        $toLines = $this->prepareMultilinePreviewLines($to, $prefix);
+
+        foreach ($fromLines as $line) {
+            $this->output->writeln('        <fg=red>-</> <fg=red>' . OutputFormatter::escape($line) . '</>');
+        }
+
+        foreach ($toLines as $line) {
+            $this->output->writeln('        <fg=green>+</> <fg=green>' . OutputFormatter::escape($line) . '</>');
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function prepareMultilinePreviewLines(string $content, string $prefix): array
+    {
+        if ($content === '') {
+            return [];
+        }
+
+        $lines = preg_split('/\r?\n/', rtrim($content, "\r\n")) ?: [];
+
+        if ($lines === []) {
+            return [];
+        }
+
+        $lines[0] = $prefix . $lines[0];
+
+        return $lines;
     }
 
     private function buildNewLine(string $line, int $column, string $from, string $to): string
