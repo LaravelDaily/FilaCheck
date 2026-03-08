@@ -39,7 +39,7 @@ function createExtraPathRule(array $paths): ExtraPathRule
                     level: 'warning',
                     message: 'Found reactive() in extra path scan.',
                     file: $context->file,
-                    line: $node->getLine(),
+                    line: $node->getStartLine(),
                 ),
             ];
         }
