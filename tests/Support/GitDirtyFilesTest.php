@@ -5,6 +5,8 @@ use Filacheck\Support\GitDirtyFiles;
 beforeEach(function () {
     $this->tempDir = sys_get_temp_dir().'/filacheck-git-dirty-test-'.uniqid();
     mkdir($this->tempDir, 0755, true);
+    exec('git init '.$this->tempDir);
+    exec('cd '.$this->tempDir.' && git config user.email "test@test.com" && git config user.name "Test"');
 });
 
 afterEach(function () {
@@ -19,13 +21,17 @@ afterEach(function () {
 });
 
 it('returns null when not in a git repository', function () {
-    $result = GitDirtyFiles::get($this->tempDir);
+    $nonGitDir = sys_get_temp_dir().'/filacheck-no-git-test-'.uniqid();
+    mkdir($nonGitDir, 0755, true);
+
+    $result = GitDirtyFiles::get($nonGitDir);
+
+    rmdir($nonGitDir);
 
     expect($result)->toBeNull();
 });
 
 it('returns empty array when there are no dirty files', function () {
-    exec('git init '.$this->tempDir);
     file_put_contents($this->tempDir.'/file.php', '<?php echo "hello";');
     exec('cd '.$this->tempDir.' && git add . && git commit -m "initial"');
 
@@ -35,7 +41,6 @@ it('returns empty array when there are no dirty files', function () {
 });
 
 it('returns modified files', function () {
-    exec('git init '.$this->tempDir);
     file_put_contents($this->tempDir.'/file.php', '<?php echo "hello";');
     exec('cd '.$this->tempDir.' && git add . && git commit -m "initial"');
 
@@ -48,7 +53,6 @@ it('returns modified files', function () {
 });
 
 it('returns untracked files', function () {
-    exec('git init '.$this->tempDir);
     file_put_contents($this->tempDir.'/existing.php', '<?php echo "hello";');
     exec('cd '.$this->tempDir.' && git add . && git commit -m "initial"');
 
@@ -61,7 +65,6 @@ it('returns untracked files', function () {
 });
 
 it('returns staged files', function () {
-    exec('git init '.$this->tempDir);
     file_put_contents($this->tempDir.'/file.php', '<?php echo "hello";');
     exec('cd '.$this->tempDir.' && git add . && git commit -m "initial"');
 
@@ -75,7 +78,6 @@ it('returns staged files', function () {
 });
 
 it('excludes deleted files', function () {
-    exec('git init '.$this->tempDir);
     file_put_contents($this->tempDir.'/keep.php', '<?php echo "keep";');
     file_put_contents($this->tempDir.'/delete.php', '<?php echo "delete";');
     exec('cd '.$this->tempDir.' && git add . && git commit -m "initial"');
@@ -90,7 +92,6 @@ it('excludes deleted files', function () {
 });
 
 it('returns absolute file paths', function () {
-    exec('git init '.$this->tempDir);
     file_put_contents($this->tempDir.'/file.php', '<?php echo "hello";');
     exec('cd '.$this->tempDir.' && git add . && git commit -m "initial"');
 
@@ -106,7 +107,6 @@ it('returns absolute file paths', function () {
 });
 
 it('returns files from subdirectories', function () {
-    exec('git init '.$this->tempDir);
     $subDir = $this->tempDir.'/app/Filament';
     mkdir($subDir, 0755, true);
     file_put_contents($subDir.'/Resource.php', '<?php echo "hello";');
@@ -121,7 +121,6 @@ it('returns files from subdirectories', function () {
 });
 
 it('returns multiple dirty files', function () {
-    exec('git init '.$this->tempDir);
     file_put_contents($this->tempDir.'/a.php', '<?php echo "a";');
     file_put_contents($this->tempDir.'/b.php', '<?php echo "b";');
     exec('cd '.$this->tempDir.' && git add . && git commit -m "initial"');
