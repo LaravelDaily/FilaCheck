@@ -95,6 +95,37 @@ class ResourceScanner
     }
 
     /**
+     * @return Violation[]
+     */
+    public function scanBladeFile(string $filePath, string $basePath): array
+    {
+        $bladeRules = array_filter($this->rules, fn (Rule $rule) => $rule instanceof BladeRule);
+
+        if (empty($bladeRules) || ! is_file($filePath)) {
+            return [];
+        }
+
+        $code = file_get_contents($filePath);
+        $context = new Context(
+            file: $filePath,
+            code: $code,
+            basePath: $basePath,
+        );
+
+        $violations = [];
+
+        foreach ($bladeRules as $rule) {
+            $ruleViolations = $rule->checkBlade($context);
+            foreach ($ruleViolations as $violation) {
+                $violation->rule = $rule->name();
+            }
+            $violations = array_merge($violations, $ruleViolations);
+        }
+
+        return $violations;
+    }
+
+    /**
      * @return SplFileInfo[]
      */
     private function findBladeFiles(string $directory): array
