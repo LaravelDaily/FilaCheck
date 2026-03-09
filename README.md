@@ -27,6 +27,21 @@ vendor/bin/filacheck app/Filament/Resources
 vendor/bin/filacheck --detailed
 ```
 
+### Scan Only Dirty Files
+
+Scan only files with uncommitted git changes, similar to Laravel Pint's `--dirty` option:
+
+```bash
+# Scan only uncommitted files
+vendor/bin/filacheck --dirty
+
+# Auto-fix only dirty files
+vendor/bin/filacheck --dirty --fix
+
+# Preview fixes for dirty files only
+vendor/bin/filacheck --dirty --dry-run
+```
+
 ### Auto-fixing Issues (Beta)
 
 FilaCheck can automatically fix many issues it detects:
@@ -36,7 +51,7 @@ FilaCheck can automatically fix many issues it detects:
 vendor/bin/filacheck --fix
 
 # Preview suggested fixes without modifying files
-vendor/bin/filacheck --fix --dry-run
+vendor/bin/filacheck --dry-run
 
 # Fix with backup files (creates .bak files before modifying)
 vendor/bin/filacheck --fix --backup

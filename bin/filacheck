@@ -9,6 +9,7 @@ use Filacheck\FilacheckServiceProvider;
 use Filacheck\Rules\BladeRule;
 use Filacheck\Rules\ExtraPathRule;
 use Filacheck\Scanner\ResourceScanner;
+use Filacheck\Support\GitDirtyFiles;
 use Filacheck\Support\RuleRegistry;
 use Symfony\Component\Console\Output\ConsoleOutput;
 
@@ -48,6 +49,7 @@ $verbose = false;
 $fix = false;
 $dryRun = false;
 $backup = false;
+$dirty = false;
 $showHelp = false;
 $showVersion = false;
 
@@ -64,6 +66,8 @@ foreach ($args as $arg) {
         $dryRun = true;
     } elseif ($arg === '--backup') {
         $backup = true;
+    } elseif ($arg === '--dirty') {
+        $dirty = true;
     } elseif (! str_starts_with($arg, '-')) {
         $path = $arg;
     }
@@ -90,6 +94,7 @@ if ($showHelp) {
     $output->writeln('  --fix                 Automatically fix issues where possible');
     $output->writeln('  --dry-run             Preview fix changes without modifying files');
     $output->writeln('  --backup              Create backup files when fixing (requires --fix)');
+    $output->writeln('  --dirty               Only scan files with uncommitted git changes');
     $output->writeln('  -h, --help            Display this help message');
     $output->writeln('  -V, --version         Display version');
     $output->writeln('');
@@ -102,6 +107,8 @@ if ($showHelp) {
     $output->writeln('  filacheck --dry-run                 Preview fixes without writing files');
     $output->writeln('  filacheck --fix --dry-run           Preview fixes without writing files');
     $output->writeln('  filacheck --fix --backup            Auto-fix with backups');
+    $output->writeln('  filacheck --dirty                   Scan only dirty files');
+    $output->writeln('  filacheck --dirty --fix             Auto-fix only dirty files');
     exit(0);
 }
 
@@ -119,12 +126,16 @@ if (! isAbsolutePath($path)) {
     $path = getcwd().DIRECTORY_SEPARATOR.$path;
 }
 
-if (! is_dir($path) && ! is_file($path)) {
+if (! $dirty && ! is_dir($path) && ! is_file($path)) {
     $output->writeln("<fg=red>Error:</> Path not found: {$path}");
     exit(1);
 }
 
-$output->writeln("Scanning: <fg=gray>{$path}</>");
+if ($dirty) {
+    $output->writeln('Scanning dirty files...');
+} else {
+    $output->writeln("Scanning: <fg=gray>{$path}</>");
+}
 $output->writeln('');
 
 $scanner = new ResourceScanner();
@@ -143,35 +154,102 @@ foreach ($registry->all() as $rule) {
     $scanner->addRule($rule);
 }
 
-$violations = $scanner->scan($path, getcwd());
+if ($dirty) {
+    $dirtyFiles = GitDirtyFiles::get(getcwd());
 
-// Extra paths from rules (e.g., app/Models for enum rules)
-$extraPathRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof ExtraPathRule);
+    if ($dirtyFiles === null) {
+        $output->writeln('<fg=red>Error:</> Could not determine dirty files. Are you in a git repository?');
+        exit(1);
+    }
 
-if (! empty($extraPathRules)) {
-    $extraPaths = [];
+    if (empty($dirtyFiles)) {
+        $output->writeln('<fg=green>No dirty files found. Nothing to scan.</>');
+        exit(0);
+    }
+
+    // Build all scannable paths (main path + extra paths + blade dir)
+    // Use realpath() to normalize paths (resolve symlinks) so they match
+    // the canonical paths returned by GitDirtyFiles
+    $scanPaths = [];
+
+    $resolvedPath = realpath($path);
+    if ($resolvedPath !== false) {
+        $scanPaths[] = $resolvedPath;
+    }
+
+    $extraPathRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof ExtraPathRule);
     foreach ($extraPathRules as $rule) {
         foreach ($rule->extraScanPaths() as $extraPath) {
-            $extraPaths[$extraPath] = true;
+            $fullPath = realpath(getcwd().DIRECTORY_SEPARATOR.$extraPath);
+            if ($fullPath !== false && is_dir($fullPath)) {
+                $scanPaths[] = $fullPath;
+            }
         }
     }
 
-    foreach (array_keys($extraPaths) as $extraPath) {
-        $fullPath = getcwd().DIRECTORY_SEPARATOR.$extraPath;
-        // Skip if already covered by the main scan path
-        if (is_dir($fullPath) && ! str_starts_with($fullPath, $path) && ! str_starts_with($path, $fullPath)) {
-            $extraViolations = $scanner->scan($fullPath, getcwd());
-            $violations = array_merge($violations, $extraViolations);
+    $hasBladeRules = ! empty(array_filter($scanner->getRules(), fn ($rule) => $rule instanceof BladeRule));
+    if ($hasBladeRules) {
+        $bladeDir = realpath(getcwd().DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'views'.DIRECTORY_SEPARATOR.'filament');
+        if ($bladeDir !== false) {
+            $scanPaths[] = $bladeDir;
         }
     }
-}
 
-$hasBladeRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof BladeRule);
+    $violations = [];
 
-if (! empty($hasBladeRules)) {
-    $bladeDir = getcwd().DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'views'.DIRECTORY_SEPARATOR.'filament';
-    $bladeViolations = $scanner->scanBladeFiles($bladeDir, getcwd());
-    $violations = array_merge($violations, $bladeViolations);
+    foreach ($dirtyFiles as $file) {
+        // Only scan files that fall within one of our scan paths
+        $inScope = false;
+        foreach ($scanPaths as $scanPath) {
+            if (str_starts_with($file, $scanPath)) {
+                $inScope = true;
+                break;
+            }
+        }
+
+        if (! $inScope) {
+            continue;
+        }
+
+        if (str_ends_with($file, '.blade.php') && $hasBladeRules) {
+            $bladeViolations = $scanner->scanBladeFile($file, getcwd());
+            $violations = array_merge($violations, $bladeViolations);
+        } elseif (str_ends_with($file, '.php')) {
+            $fileViolations = $scanner->scan($file, getcwd());
+            $violations = array_merge($violations, $fileViolations);
+        }
+    }
+} else {
+    $violations = $scanner->scan($path, getcwd());
+
+    // Extra paths from rules (e.g., app/Models for enum rules)
+    $extraPathRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof ExtraPathRule);
+
+    if (! empty($extraPathRules)) {
+        $extraPaths = [];
+        foreach ($extraPathRules as $rule) {
+            foreach ($rule->extraScanPaths() as $extraPath) {
+                $extraPaths[$extraPath] = true;
+            }
+        }
+
+        foreach (array_keys($extraPaths) as $extraPath) {
+            $fullPath = getcwd().DIRECTORY_SEPARATOR.$extraPath;
+            // Skip if already covered by the main scan path
+            if (is_dir($fullPath) && ! str_starts_with($fullPath, $path) && ! str_starts_with($path, $fullPath)) {
+                $extraViolations = $scanner->scan($fullPath, getcwd());
+                $violations = array_merge($violations, $extraViolations);
+            }
+        }
+    }
+
+    $hasBladeRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof BladeRule);
+
+    if (! empty($hasBladeRules)) {
+        $bladeDir = getcwd().DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'views'.DIRECTORY_SEPARATOR.'filament';
+        $bladeViolations = $scanner->scanBladeFiles($bladeDir, getcwd());
+        $violations = array_merge($violations, $bladeViolations);
+    }
 }
 
 $reporter = new StandaloneReporter($output, $verbose);
