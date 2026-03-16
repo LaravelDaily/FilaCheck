@@ -62,6 +62,27 @@ vendor/bin/filacheck --fix --backup
 
 ---
 
+## Configuration
+
+You can optionally publish the config file to disable individual rules:
+
+```bash
+php artisan vendor:publish --tag=filacheck-config
+```
+
+To disable a rule, set `enabled` to `false`:
+
+```php
+// config/filacheck.php
+'deprecated-reactive' => [
+    'enabled' => false,
+],
+```
+
+All rules are enabled by default.
+
+---
+
 ## Available Rules (15 Free)
 
 FilaCheck includes the following rules for detecting deprecated code patterns and common issues:

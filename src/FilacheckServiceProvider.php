@@ -31,7 +31,22 @@ class FilacheckServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->app->make(RuleRegistry::class)->register(static::rules());
+        $this->mergeConfigFrom(__DIR__.'/../config/filacheck.php', 'filacheck');
+
+        $this->publishes([
+            __DIR__.'/../config/filacheck.php' => config_path('filacheck.php'),
+        ], 'filacheck-config');
+
+        $rules = array_filter(static::rules(), function (string $ruleClass): bool {
+            $name = (new $ruleClass)->name();
+            try {
+                return (bool) config("filacheck.{$name}.enabled", true);
+            } catch (\Throwable) {
+                return true;
+            }
+        });
+
+        $this->app->make(RuleRegistry::class)->register(array_values($rules));
     }
 
     /** @return array<class-string<Rule>> */
