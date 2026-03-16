@@ -4,6 +4,7 @@ namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
 use Filacheck\Rules\Concerns\CalculatesLineNumbers;
+use Filacheck\Rules\Concerns\ResolvesClassBasename;
 use Filacheck\Rules\Concerns\ResolvesFilamentDocsUrl;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
@@ -18,7 +19,9 @@ use PhpParser\Node\Scalar\String_;
 class DeprecatedEmptyLabelRule implements FixableRule
 {
     use CalculatesLineNumbers;
+    use ResolvesClassBasename;
     use ResolvesFilamentDocsUrl;
+
     public function name(): string
     {
         return 'deprecated-empty-label';
@@ -158,10 +161,4 @@ class DeprecatedEmptyLabelRule implements FixableRule
         return null;
     }
 
-    private function classBasename(string $class): string
-    {
-        $parts = explode('\\', $class);
-
-        return end($parts);
-    }
 }

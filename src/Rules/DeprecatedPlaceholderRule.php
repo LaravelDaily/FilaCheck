@@ -4,6 +4,7 @@ namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
 use Filacheck\Rules\Concerns\CalculatesLineNumbers;
+use Filacheck\Rules\Concerns\ResolvesClassBasename;
 use Filacheck\Rules\Concerns\ResolvesFilamentDocsUrl;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
@@ -15,7 +16,9 @@ use PhpParser\Node\Name;
 class DeprecatedPlaceholderRule implements Rule
 {
     use CalculatesLineNumbers;
+    use ResolvesClassBasename;
     use ResolvesFilamentDocsUrl;
+
     public function name(): string
     {
         return 'deprecated-placeholder';
@@ -62,10 +65,4 @@ class DeprecatedPlaceholderRule implements Rule
         ];
     }
 
-    private function classBasename(string $class): string
-    {
-        $parts = explode('\\', $class);
-
-        return end($parts);
-    }
 }
