@@ -50,6 +50,19 @@ class FilacheckServiceProvider extends ServiceProvider
     }
 
     /** @return array<class-string<Rule>> */
+    public static function cliRules(): array
+    {
+        $configPath = getcwd().'/config/filacheck.php';
+        $config = file_exists($configPath) ? require $configPath : [];
+
+        return array_values(array_filter(static::rules(), function (string $ruleClass) use ($config): bool {
+            $name = (new $ruleClass)->name();
+
+            return (bool) ($config[$name]['enabled'] ?? true);
+        }));
+    }
+
+    /** @return array<class-string<Rule>> */
     public static function rules(): array
     {
         return [
