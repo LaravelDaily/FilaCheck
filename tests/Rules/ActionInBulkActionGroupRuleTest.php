@@ -364,6 +364,34 @@ PHP;
     expect($fixedCode)->toContain('use Filament\Actions\BulkAction;');
 });
 
+it('does not flag Action::make() inside ActionGroup::make() within toolbarActions', function () {
+    $code = <<<'PHP'
+<?php
+
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Table;
+
+class TestResource
+{
+    public function table(Table $table): Table
+    {
+        return $table
+            ->toolbarActions([
+                ActionGroup::make([
+                    Action::make('approve')
+                        ->label('Approve'),
+                ]),
+            ]);
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new ActionInBulkActionGroupRule, $code);
+
+    $this->assertNoViolations($violations);
+});
+
 it('detects Action::make() in a non-table method with Table type-hinted parameter', function () {
     $code = <<<'PHP'
 <?php
