@@ -87,7 +87,22 @@ class ActionInBulkActionGroupRule implements FixableRule
                     }
                 }
 
-                // Check Action::make() directly inside toolbarActions (not in BulkActionGroup)
+                // Exclude Action::make() inside ActionGroup::make() (not a BulkActionGroup)
+                $actionGroups = $nodeFinder->find($arg, function (Node $n) {
+                    return $n instanceof StaticCall
+                        && $n->class instanceof Name
+                        && class_basename($n->class->toString()) === 'ActionGroup'
+                        && $n->name instanceof Identifier
+                        && $n->name->name === 'make';
+                });
+
+                foreach ($actionGroups as $actionGroup) {
+                    foreach ($nodeFinder->find($actionGroup, $isActionMake) as $actionCall) {
+                        $reported[$actionCall->class->getStartFilePos()] = true;
+                    }
+                }
+
+                // Check Action::make() directly inside toolbarActions (not in BulkActionGroup or ActionGroup)
                 $actionCalls = $nodeFinder->find($arg, $isActionMake);
 
                 foreach ($actionCalls as $actionCall) {
