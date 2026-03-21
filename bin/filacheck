@@ -142,12 +142,15 @@ $scanner = new ResourceScanner();
 
 $registry = new RuleRegistry();
 
-$registry->register(FilacheckServiceProvider::rules());
+$registry->register(FilacheckServiceProvider::cliRules());
 
 // Pro rules (auto-detected if installed)
 $proProvider = 'FilacheckPro\\FilacheckProServiceProvider';
 if (class_exists($proProvider)) {
-    $registry->register($proProvider::rules());
+    $rules = method_exists($proProvider, 'cliRules')
+        ? $proProvider::cliRules()
+        : $proProvider::rules();
+    $registry->register($rules);
 }
 
 foreach ($registry->all() as $rule) {
