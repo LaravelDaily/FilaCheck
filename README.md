@@ -148,7 +148,7 @@ This makes FilaCheck perfect for CI pipelines.
 
 ## [FilaCheck Pro](https://filamentexamples.com/filacheck)
 
-**FilaCheck Pro** adds 19 additional rules for performance optimization, security, best practices, and UX suggestions.
+**FilaCheck Pro** adds 18 additional rules for performance optimization, security, best practices, and UX suggestions.
 
 ### Performance Rules (4 rules)
 
@@ -159,12 +159,11 @@ This makes FilaCheck perfect for CI pipelines.
 | `heavy-closure-in-format-state` | Detects database queries inside `formatStateUsing()` closures that cause N+1 issues | No |
 | `stats-widget-polling-not-disabled` | Warns when `StatsOverviewWidget` uses the default 5-second polling interval | Yes |
 
-### Security Rules (2 rules)
+### Security Rules (1 rule)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
 | `file-upload-missing-accepted-file-types` | Warns when `FileUpload` or `SpatieMediaLibraryFileUpload` is missing `acceptedFileTypes()` or `image()` | No |
-| `action-missing-authorization` | Warns when `Action`, `BulkAction`, `ImportAction`, or `ExportAction` is missing `hidden()`, `visible()`, or `authorize()` | No |
 
 ### Best Practices Rules (8 rules)
 
