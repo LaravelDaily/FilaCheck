@@ -11,7 +11,7 @@ use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Identifier;
 
-class DeprecatedReactiveRule implements FixableRule
+class DeprecatedReactiveRule implements FixableRule, ProvidesAgentFix
 {
     use CalculatesLineNumbers;
     use ResolvesFilamentDocsUrl;
@@ -55,6 +55,18 @@ class DeprecatedReactiveRule implements FixableRule
                 endPos: $endPos,
                 replacement: 'live',
             ),
+        ];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Replace the deprecated `reactive()` modifier with `live()`.',
+            'next_steps' => [
+                'Rename `->reactive()` to `->live()` on the field.',
+                'If you need debounced updates, use `->live(debounce: 500)`. If you only want to react on blur, use `->live(onBlur: true)`.',
+            ],
+            'docs' => $this->filamentDocsUrl('forms/overview#the-basics-of-reactivity'),
         ];
     }
 }

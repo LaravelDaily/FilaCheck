@@ -17,7 +17,7 @@ use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Return_;
 use PhpParser\NodeFinder;
 
-class DeprecatedGetTableQueryRule implements FixableRule
+class DeprecatedGetTableQueryRule implements FixableRule, ProvidesAgentFix
 {
     use AddsImport;
     use CalculatesLineNumbers;
@@ -147,6 +147,20 @@ class DeprecatedGetTableQueryRule implements FixableRule
         );
 
         return $violations;
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Move the query from the deprecated `getTableQuery()` method into a `->query()` call inside `table(Table $table)`.',
+            'next_steps' => [
+                'Inside the existing `table(Table $table)` method, chain `->query(fn (): Builder => /* the original return expression */)` directly off `$table`.',
+                'Add `use Illuminate\Database\Eloquent\Builder;` at the top of the file if it is not already imported.',
+                'Delete the `getTableQuery()` method completely — it is no longer wired up.',
+                'If the body of `getTableQuery()` is more than a single return statement, lift the logic into the closure manually rather than relying on the auto-fix.',
+            ],
+            'docs' => $this->filamentDocsUrl('components/table'),
+        ];
     }
 
     private function findMethod(Class_ $class, string $name): ?ClassMethod

@@ -5,6 +5,7 @@ namespace Filacheck\Rules;
 use Filacheck\Enums\RuleCategory;
 use Filacheck\Rules\Concerns\AddsImport;
 use Filacheck\Rules\Concerns\CalculatesLineNumbers;
+use Filacheck\Rules\Concerns\ResolvesFilamentDocsUrl;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
@@ -13,10 +14,11 @@ use PhpParser\Node\Identifier;
 
 use function is_string;
 
-class DeprecatedTestMethodsRule implements FixableRule, ExtraPathRule
+class DeprecatedTestMethodsRule implements FixableRule, ExtraPathRule, ProvidesAgentFix
 {
     use AddsImport;
     use CalculatesLineNumbers;
+    use ResolvesFilamentDocsUrl;
 
     /**
      * @var array<string, string|array{0: string, 1: string|array{0: string, 1: string}}>
@@ -281,5 +283,34 @@ class DeprecatedTestMethodsRule implements FixableRule, ExtraPathRule
     public function extraScanPaths(): array
     {
         return ['test', 'tests'];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        $methodName = null;
+
+        if (preg_match('/`([A-Za-z0-9_]+)\(\)`/', $violation->message, $matches)) {
+            $methodName = $matches[1];
+        }
+
+        $replacement = null;
+
+        if ($methodName !== null && array_key_exists($methodName, $this->deprecatedMethods)) {
+            $deprecated = $this->deprecatedMethods[$methodName];
+            $replacement = is_string($deprecated) ? $deprecated : $deprecated[0];
+        }
+
+        return [
+            'instructions' => 'Replace the deprecated Filament v3 testing helper with its v4 equivalent.',
+            'deprecated_method' => $methodName,
+            'replacement' => $replacement,
+            'next_steps' => [
+                'Rename the test helper according to the v4 mapping. Most table/form helpers move to `TestAction::make(...)->table()` (or `->bulk()`, `->schemaComponent()`) wrappers.',
+                'When the replacement uses `TestAction::make(...)`, add `use Filament\Actions\Testing\TestAction;` to the test file (the rule emits a separate import violation for this when needed).',
+                'Helpers like `assertHasActionErrors` collapse to `assertHasFormErrors()` — the argument list is unchanged.',
+                'Some replacements (e.g. `callTableAction`, `assertTableActionHasIcon`) are not auto-fixable because they require argument restructuring; rewrite them by hand using the suggestion text.',
+            ],
+            'docs' => $this->filamentDocsUrl('testing'),
+        ];
     }
 }

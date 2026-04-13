@@ -14,7 +14,7 @@ use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 
-class DeprecatedImageColumnSizeRule implements FixableRule
+class DeprecatedImageColumnSizeRule implements FixableRule, ProvidesAgentFix
 {
     use CalculatesLineNumbers;
     use ResolvesFilamentDocsUrl;
@@ -62,6 +62,18 @@ class DeprecatedImageColumnSizeRule implements FixableRule
                 endPos: $endPos,
                 replacement: 'imageSize',
             ),
+        ];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Rename the deprecated `size()` method on `ImageColumn` to `imageSize()`.',
+            'next_steps' => [
+                'Replace `->size(...)` with `->imageSize(...)` on the `ImageColumn`. Arguments are unchanged.',
+                'Only apply this rename on `ImageColumn` chains — `size()` is still valid on other columns like `TextColumn`.',
+            ],
+            'docs' => $this->filamentDocsUrl('tables/columns/image#customizing-the-size'),
         ];
     }
 

@@ -13,7 +13,7 @@ use PhpParser\Node\Expr\Closure;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Use_;
 
-class DeprecatedFormsGetRule implements FixableRule
+class DeprecatedFormsGetRule implements FixableRule, ProvidesAgentFix
 {
     use AddsImport;
     use CalculatesLineNumbers;
@@ -106,5 +106,18 @@ class DeprecatedFormsGetRule implements FixableRule
         }
 
         return $violations;
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Migrate from the deprecated `Filament\Forms\Get` to `Filament\Schemas\Components\Utilities\Get`.',
+            'next_steps' => [
+                'Replace the import `use Filament\Forms\Get;` with `use Filament\Schemas\Components\Utilities\Get;`.',
+                'Change any closure parameter typed as `callable $get` (when the variable is `$get`) to `Get $get` so state lookups stay type-safe.',
+                'If several files import the old namespace, repeat the rename in every file — each is its own violation.',
+            ],
+            'docs' => $this->filamentDocsUrl('forms/overview#injecting-the-state-of-another-field'),
+        ];
     }
 }

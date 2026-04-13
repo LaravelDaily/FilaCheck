@@ -14,7 +14,7 @@ use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 
-class DeprecatedFilterFormRule implements FixableRule
+class DeprecatedFilterFormRule implements FixableRule, ProvidesAgentFix
 {
     use CalculatesLineNumbers;
     use ResolvesFilamentDocsUrl;
@@ -69,6 +69,18 @@ class DeprecatedFilterFormRule implements FixableRule
                 endPos: $endPos,
                 replacement: 'schema',
             ),
+        ];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Rename the deprecated `form()` method on filters to `schema()`.',
+            'next_steps' => [
+                'Replace `->form([...])` with `->schema([...])` on the filter. The array of components is unchanged.',
+                'Only apply this rename when the chain originates from a filter class (e.g. `Filter`, `SelectFilter`, `TernaryFilter`, `QueryBuilder`) or inside a class that extends one.',
+            ],
+            'docs' => $this->filamentDocsUrl('tables/filters/custom'),
         ];
     }
 

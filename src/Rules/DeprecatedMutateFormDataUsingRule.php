@@ -4,15 +4,17 @@ namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
 use Filacheck\Rules\Concerns\CalculatesLineNumbers;
+use Filacheck\Rules\Concerns\ResolvesFilamentDocsUrl;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Identifier;
 
-class DeprecatedMutateFormDataUsingRule implements FixableRule
+class DeprecatedMutateFormDataUsingRule implements FixableRule, ProvidesAgentFix
 {
     use CalculatesLineNumbers;
+    use ResolvesFilamentDocsUrl;
     public function name(): string
     {
         return 'deprecated-mutate-form-data-using';
@@ -53,6 +55,18 @@ class DeprecatedMutateFormDataUsingRule implements FixableRule
                 endPos: $endPos,
                 replacement: 'mutateDataUsing',
             ),
+        ];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Rename the deprecated `mutateFormDataUsing()` callback to `mutateDataUsing()`.',
+            'next_steps' => [
+                'Replace the method name `mutateFormDataUsing` with `mutateDataUsing`. The closure signature is unchanged.',
+                'Check every action chain in the file — this rule only reports one occurrence per node, but the same rename applies everywhere the deprecated name is used.',
+            ],
+            'docs' => $this->filamentDocsUrl('actions/overview'),
         ];
     }
 }

@@ -14,7 +14,7 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Use_;
 
-class WrongTabNamespaceRule implements FixableRule
+class WrongTabNamespaceRule implements FixableRule, ProvidesAgentFix
 {
     use AddsImport;
     use CalculatesLineNumbers;
@@ -143,5 +143,18 @@ class WrongTabNamespaceRule implements FixableRule
         }
 
         return [];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Update any `Tab` import or v3-style `Tabs\Tab::make()` call to the correct `Filament\Schemas\Components\Tabs\Tab` namespace.',
+            'next_steps' => [
+                'Replace any `use Filament\...\Tab;` import whose fully qualified name is not `Filament\Schemas\Components\Tabs\Tab` with the correct namespace.',
+                'Replace any `Tabs\Tab::make()` call with `Tab::make()` (the import will be added automatically).',
+                'Ensure the file has `use Filament\Schemas\Components\Tabs\Tab;` — if the rule emits a second "missing import" violation, that is the auto-added import statement.',
+            ],
+            'docs' => $this->filamentDocsUrl('schemas/tabs'),
+        ];
     }
 }
