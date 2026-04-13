@@ -4,13 +4,15 @@ namespace Filacheck\Rules;
 
 use Filacheck\Enums\RuleCategory;
 use Filacheck\Rules\Concerns\CalculatesLineNumbers;
+use Filacheck\Rules\Concerns\ResolvesFilamentDocsUrl;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
 
-class DeprecatedViewPropertyRule implements FixableRule
+class DeprecatedViewPropertyRule implements FixableRule, ProvidesAgentFix
 {
     use CalculatesLineNumbers;
+    use ResolvesFilamentDocsUrl;
 
     public function name(): string
     {
@@ -63,6 +65,19 @@ class DeprecatedViewPropertyRule implements FixableRule
                 endPos: $propVarStartPos,
                 replacement: 'protected string ',
             ),
+        ];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Declare the `$view` property as `protected string $view` so Filament can resolve the view path correctly.',
+            'next_steps' => [
+                'Change the visibility, modifier, and type of the `$view` property to exactly `protected string $view = \'...\';`.',
+                'Do not make the property `static`, `public`, `private`, or untyped — Filament expects the protected-string shape.',
+                'If the value is computed at runtime, use a `getView()` method instead and remove the property.',
+            ],
+            'docs' => $this->filamentDocsUrl('schemas/overview'),
         ];
     }
 }

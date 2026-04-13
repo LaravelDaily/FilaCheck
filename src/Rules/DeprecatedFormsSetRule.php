@@ -13,7 +13,7 @@ use PhpParser\Node\Expr\Closure;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Use_;
 
-class DeprecatedFormsSetRule implements FixableRule
+class DeprecatedFormsSetRule implements FixableRule, ProvidesAgentFix
 {
     use AddsImport;
     use CalculatesLineNumbers;
@@ -106,5 +106,18 @@ class DeprecatedFormsSetRule implements FixableRule
         }
 
         return $violations;
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Migrate from the deprecated `Filament\Forms\Set` to `Filament\Schemas\Components\Utilities\Set`.',
+            'next_steps' => [
+                'Replace the import `use Filament\Forms\Set;` with `use Filament\Schemas\Components\Utilities\Set;`.',
+                'Change any closure parameter typed as `callable $set` (when the variable is `$set`) to `Set $set` so state mutations stay type-safe.',
+                'If several files import the old namespace, repeat the rename in every file — each is its own violation.',
+            ],
+            'docs' => $this->filamentDocsUrl('forms/overview#setting-the-state-of-another-field'),
+        ];
     }
 }

@@ -4,13 +4,14 @@
 declare(strict_types=1);
 
 use Filacheck\Fixer\CodeFixer;
-use Filacheck\Reporting\StandaloneReporter;
+use Filacheck\Reporting\ReporterFactory;
 use Filacheck\FilacheckServiceProvider;
 use Filacheck\Rules\BladeRule;
 use Filacheck\Rules\ExtraPathRule;
 use Filacheck\Scanner\ResourceScanner;
 use Filacheck\Support\GitDirtyFiles;
 use Filacheck\Support\RuleRegistry;
+use Filacheck\Support\RunContext;
 use Symfony\Component\Console\Output\ConsoleOutput;
 
 // Autoload handling for different installation contexts
@@ -131,26 +132,43 @@ if (! $dirty && ! is_dir($path) && ! is_file($path)) {
     exit(1);
 }
 
-if ($dirty) {
-    $output->writeln('Scanning dirty files...');
-} else {
-    $output->writeln("Scanning: <fg=gray>{$path}</>");
-}
-$output->writeln('');
-
 $scanner = new ResourceScanner();
 
 $registry = new RuleRegistry();
 
 $registry->register(FilacheckServiceProvider::cliRules());
 
-// Pro rules (auto-detected if installed)
+// Pro rules (auto-detected if installed). Pro's cliRules() may also call
+// RunContext::markAgent() and ReporterFactory::override() as a side effect
+// when an AI coding agent is detected (pao-style).
 $proProvider = 'FilacheckPro\\FilacheckProServiceProvider';
 if (class_exists($proProvider)) {
     $rules = method_exists($proProvider, 'cliRules')
         ? $proProvider::cliRules()
         : $proProvider::rules();
     $registry->register($rules);
+}
+
+// In agent mode, force --fix so CodeFixer applies all auto-fixable issues
+// with byte-precise positions before any structured reporter (e.g.
+// JsonReporter) emits output. This avoids handing the agent ambiguous
+// search/replace strings for fixes the tool can already apply itself.
+if (RunContext::isAgent()) {
+    $fix = true;
+}
+
+// Progress text goes to stderr so stdout stays clean for parseable
+// reporter output (e.g. JsonReporter when an AI agent is detected). In
+// agent mode the progress chatter is suppressed entirely so the agent
+// gets a clean single-line JSON document on stdout and nothing else.
+if (! RunContext::isAgent()) {
+    $progress = $output->getErrorOutput();
+    if ($dirty) {
+        $progress->writeln('Scanning dirty files...');
+    } else {
+        $progress->writeln("Scanning: <fg=gray>{$path}</>");
+    }
+    $progress->writeln('');
 }
 
 foreach ($registry->all() as $rule) {
@@ -255,7 +273,7 @@ if ($dirty) {
     }
 }
 
-$reporter = new StandaloneReporter($output, $verbose);
+$reporter = ReporterFactory::make($output, $verbose);
 
 if ($fix && count($violations) > 0) {
     $fixer = new CodeFixer();

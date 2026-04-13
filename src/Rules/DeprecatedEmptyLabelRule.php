@@ -16,7 +16,7 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Scalar\String_;
 
-class DeprecatedEmptyLabelRule implements FixableRule
+class DeprecatedEmptyLabelRule implements FixableRule, ProvidesAgentFix
 {
     use CalculatesLineNumbers;
     use ResolvesClassBasename;
@@ -100,6 +100,19 @@ class DeprecatedEmptyLabelRule implements FixableRule
                 endPos: $endPos,
                 replacement: 'hiddenLabel()',
             ),
+        ];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Stop using `label(\'\')` to hide labels — use the dedicated helper instead (`hiddenLabel()` for fields, `iconButton()` for actions).',
+            'next_steps' => [
+                'For action chains (any class whose name ends in `Action`), replace `->label(\'\')` with `->iconButton()` so the trigger renders as an icon-only button.',
+                'For everything else (form fields, schema components), replace `->label(\'\')` with `->hiddenLabel()`.',
+                'Do not apply this fix to table column chains — columns do not expose `hiddenLabel()` and the rule already skips them.',
+            ],
+            'docs' => $this->filamentDocsUrl('forms/overview#hiding-a-field’s-label'),
         ];
     }
 

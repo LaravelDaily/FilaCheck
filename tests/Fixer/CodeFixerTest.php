@@ -270,6 +270,175 @@ it('handles multiple files', function () {
     expect(file_get_contents($file2))->toBe('<?php $b->live();');
 });
 
+function makeCommandFixture(string $tempDir): string
+{
+    $project = $tempDir.'/project-'.uniqid();
+    mkdir($project, 0755, true);
+    file_put_contents($project.'/artisan', "#!/usr/bin/env php\n<?php\n");
+
+    return $project;
+}
+
+it('runs a command-style fix and counts it as fixed', function () {
+    $project = makeCommandFixture($this->tempDir);
+    $marker = $this->tempDir.'/ran-'.uniqid();
+
+    $violations = [
+        new Violation(
+            level: 'warning',
+            message: 'needs scaffolding',
+            file: $project.'/some/blade.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: 'touch '.escapeshellarg($marker),
+            fixCommandCwd: $project,
+        ),
+    ];
+
+    $results = (new CodeFixer)->fix($violations);
+
+    expect($results['fixed'])->toBe(1);
+    expect($results['skipped'])->toBe(0);
+    expect($results['commands'])->toHaveCount(1);
+    expect($results['commands'][0]['status'])->toBe('ran');
+    expect($results['commands'][0]['violations'])->toBe(1);
+    expect(file_exists($marker))->toBeTrue();
+
+    @unlink($marker);
+    @unlink($project.'/artisan');
+    @rmdir($project);
+});
+
+it('does not execute command-style fixes during dry run', function () {
+    $project = makeCommandFixture($this->tempDir);
+    $marker = $this->tempDir.'/dryrun-'.uniqid();
+
+    $violations = [
+        new Violation(
+            level: 'warning',
+            message: 'needs scaffolding',
+            file: $project.'/some/blade.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: 'touch '.escapeshellarg($marker),
+            fixCommandCwd: $project,
+        ),
+    ];
+
+    $results = (new CodeFixer)->fix($violations, dryRun: true);
+
+    expect($results['commands'])->toHaveCount(1);
+    expect($results['commands'][0]['status'])->toBe('would-run');
+    expect($results['fixed'])->toBe(1);
+    expect(file_exists($marker))->toBeFalse();
+
+    @unlink($project.'/artisan');
+    @rmdir($project);
+});
+
+it('dedupes identical command-style fixes across multiple violations', function () {
+    $project = makeCommandFixture($this->tempDir);
+    $counter = $this->tempDir.'/counter-'.uniqid();
+
+    $cmd = 'sh -c '.escapeshellarg('printf x >> '.escapeshellarg($counter));
+
+    $violations = [
+        new Violation(
+            level: 'warning',
+            message: 'first',
+            file: $project.'/a.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: $cmd,
+            fixCommandCwd: $project,
+        ),
+        new Violation(
+            level: 'warning',
+            message: 'second',
+            file: $project.'/b.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: $cmd,
+            fixCommandCwd: $project,
+        ),
+        new Violation(
+            level: 'warning',
+            message: 'third',
+            file: $project.'/c.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: $cmd,
+            fixCommandCwd: $project,
+        ),
+    ];
+
+    $results = (new CodeFixer)->fix($violations);
+
+    expect($results['commands'])->toHaveCount(1);
+    expect($results['commands'][0]['violations'])->toBe(3);
+    expect($results['fixed'])->toBe(3);
+    expect(file_get_contents($counter))->toBe('x');
+
+    @unlink($counter);
+    @unlink($project.'/artisan');
+    @rmdir($project);
+});
+
+it('marks failed command-style fixes as skipped', function () {
+    $project = makeCommandFixture($this->tempDir);
+
+    $violations = [
+        new Violation(
+            level: 'warning',
+            message: 'needs scaffolding',
+            file: $project.'/blade.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: 'sh -c "exit 7"',
+            fixCommandCwd: $project,
+        ),
+    ];
+
+    $results = (new CodeFixer)->fix($violations);
+
+    expect($results['fixed'])->toBe(0);
+    expect($results['skipped'])->toBe(1);
+    expect($results['commands'])->toHaveCount(1);
+    expect($results['commands'][0]['status'])->toBe('failed');
+
+    @unlink($project.'/artisan');
+    @rmdir($project);
+});
+
+it('refuses to run command-style fixes when cwd has no artisan', function () {
+    $bare = $this->tempDir.'/bare-'.uniqid();
+    mkdir($bare, 0755, true);
+    $marker = $this->tempDir.'/refused-'.uniqid();
+
+    $violations = [
+        new Violation(
+            level: 'warning',
+            message: 'needs scaffolding',
+            file: $bare.'/blade.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: 'touch '.escapeshellarg($marker),
+            fixCommandCwd: $bare,
+        ),
+    ];
+
+    $results = (new CodeFixer)->fix($violations);
+
+    expect($results['fixed'])->toBe(0);
+    expect($results['skipped'])->toBe(1);
+    expect($results['commands'])->toHaveCount(1);
+    expect($results['commands'][0]['status'])->toBe('failed');
+    expect($results['commands'][0]['output'])->toContain('artisan');
+    expect(file_exists($marker))->toBeFalse();
+
+    @rmdir($bare);
+});
+
 it('returns fix results by file', function () {
     $file = $this->tempDir.'/test.php';
     file_put_contents($file, '<?php $input->reactive();');

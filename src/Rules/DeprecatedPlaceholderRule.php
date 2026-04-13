@@ -13,7 +13,7 @@ use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 
-class DeprecatedPlaceholderRule implements Rule
+class DeprecatedPlaceholderRule implements ProvidesAgentFix, Rule
 {
     use CalculatesLineNumbers;
     use ResolvesClassBasename;
@@ -62,6 +62,20 @@ class DeprecatedPlaceholderRule implements Rule
                 line: $this->getLineFromPosition($context->code, $node->name->getStartFilePos()),
                 suggestion: 'Use `TextEntry::make()->state()` instead. See: ' . $this->filamentDocsUrl('infolists/overview#setting-the-state-of-an-entry'),
             ),
+        ];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Replace the deprecated `Placeholder::make()` component with `TextEntry::make()->state(...)`.',
+            'next_steps' => [
+                'Swap `Placeholder::make($name)->content($value)` for `TextEntry::make($name)->state($value)`.',
+                'Add the import `use Filament\Infolists\Components\TextEntry;` if it is not already present.',
+                'If the placeholder was inside a form schema rather than an infolist, move the field into the corresponding infolist `schema()` — `TextEntry` lives in the infolist namespace.',
+                'This rule has no auto-fix; the rename must be done by hand.',
+            ],
+            'docs' => $this->filamentDocsUrl('infolists/overview#setting-the-state-of-an-entry'),
         ];
     }
 

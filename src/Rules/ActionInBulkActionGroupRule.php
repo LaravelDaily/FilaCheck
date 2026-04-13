@@ -16,7 +16,7 @@ use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\NodeFinder;
 
-class ActionInBulkActionGroupRule implements FixableRule
+class ActionInBulkActionGroupRule implements FixableRule, ProvidesAgentFix
 {
     use AddsImport;
     use CalculatesLineNumbers;
@@ -140,6 +140,20 @@ class ActionInBulkActionGroupRule implements FixableRule
         }
 
         return false;
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Replace `Action::make()` with `BulkAction::make()` whenever it appears inside `toolbarActions()` (directly or wrapped in a `BulkActionGroup`).',
+            'next_steps' => [
+                'Rename the `Action::make()` static call to `BulkAction::make()` — the rest of the chain stays the same.',
+                'Add `use Filament\Actions\BulkAction;` to the file (the rule emits a separate import violation for this when needed).',
+                'Do not rewrite `Action::make()` calls inside an `ActionGroup::make()` — those still belong to the per-row action group and are not bulk actions.',
+                'Single-record actions belong in `recordActions()`, not `toolbarActions()`. If the call was placed in the wrong slot, move it instead of changing its class.',
+            ],
+            'docs' => $this->filamentDocsUrl('tables/actions#bulk-actions'),
+        ];
     }
 
     private function buildActionViolation(StaticCall $actionCall, Context $context): Violation

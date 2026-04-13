@@ -14,7 +14,7 @@ use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\NodeFinder;
 
-class DeprecatedBulkActionsRule implements FixableRule
+class DeprecatedBulkActionsRule implements FixableRule, ProvidesAgentFix
 {
     use CalculatesLineNumbers;
     use ResolvesFilamentDocsUrl;
@@ -67,6 +67,18 @@ class DeprecatedBulkActionsRule implements FixableRule
         }
 
         return $violations;
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Rename the deprecated `bulkActions()` method on the table configuration to `toolbarActions()`.',
+            'next_steps' => [
+                'Replace `->bulkActions([...])` with `->toolbarActions([...])` inside the `table(Table $table)` method.',
+                'The array contents are unchanged — bulk actions still use `BulkAction::make()` or `BulkActionGroup::make()`.',
+            ],
+            'docs' => $this->filamentDocsUrl('tables/actions#record-actions'),
+        ];
     }
 
     private function hasTableParameter(ClassMethod $node): bool

@@ -14,7 +14,7 @@ use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 
-class DeprecatedActionFormRule implements FixableRule
+class DeprecatedActionFormRule implements FixableRule, ProvidesAgentFix
 {
     use CalculatesLineNumbers;
     use ResolvesFilamentDocsUrl;
@@ -77,6 +77,19 @@ class DeprecatedActionFormRule implements FixableRule
                 endPos: $endPos,
                 replacement: 'schema',
             ),
+        ];
+    }
+
+    public function agentFix(Violation $violation): mixed
+    {
+        return [
+            'instructions' => 'Rename the deprecated `form()` method on actions to `schema()`.',
+            'next_steps' => [
+                'Replace `->form([...])` with `->schema([...])` on the action. The array of components is unchanged.',
+                'Only apply this rename when the chain originates from an action class (e.g. `CreateAction`, `EditAction`, `Action`) or inside a class that extends one.',
+                'Do not rename `form()` on Livewire components or table configurations — those are unrelated to this deprecation.',
+            ],
+            'docs' => $this->filamentDocsUrl('actions'),
         ];
     }
 
