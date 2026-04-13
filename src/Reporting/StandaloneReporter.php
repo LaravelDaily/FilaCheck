@@ -8,7 +8,7 @@ use Filacheck\Rules\Rule;
 use Filacheck\Support\Violation;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class StandaloneReporter
+class StandaloneReporter implements ReporterInterface
 {
     use HandlesDryRunPreviews;
 

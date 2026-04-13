@@ -7,7 +7,7 @@ use Filacheck\Rules\Rule;
 use Filacheck\Support\Violation;
 use Illuminate\Console\Command;
 
-class ConsoleReporter
+class ConsoleReporter implements ReporterInterface
 {
     public function __construct(
         private Command $command,
