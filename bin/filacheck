@@ -190,75 +190,91 @@ if ($dirty) {
 
     // Build all scannable paths (main path + extra paths + blade dir)
     // Use realpath() to normalize paths (resolve symlinks) so they match
-    // the canonical paths returned by GitDirtyFiles
-    $scanPaths = [];
-
-    $resolvedPath = realpath($path);
-    if ($resolvedPath !== false) {
-        $scanPaths[] = $resolvedPath;
-    }
+    // the canonical paths returned by GitDirtyFiles. Extra paths track their
+    // owning rules so dirty files inside them are scanned only with the
+    // requesting rule(s).
+    $mainScanPath = realpath($path) ?: null;
 
     $extraPathRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof ExtraPathRule);
+    $extraPathOwners = [];
     foreach ($extraPathRules as $rule) {
         foreach ($rule->extraScanPaths() as $extraPath) {
             $fullPath = realpath(getcwd().DIRECTORY_SEPARATOR.$extraPath);
             if ($fullPath !== false && is_dir($fullPath)) {
-                $scanPaths[] = $fullPath;
+                $extraPathOwners[$fullPath][] = $rule;
             }
         }
     }
 
     $hasBladeRules = ! empty(array_filter($scanner->getRules(), fn ($rule) => $rule instanceof BladeRule));
+    $bladeDir = null;
     if ($hasBladeRules) {
-        $bladeDir = realpath(getcwd().DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'views'.DIRECTORY_SEPARATOR.'filament');
-        if ($bladeDir !== false) {
-            $scanPaths[] = $bladeDir;
+        $resolvedBladeDir = realpath(getcwd().DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'views'.DIRECTORY_SEPARATOR.'filament');
+        if ($resolvedBladeDir !== false) {
+            $bladeDir = $resolvedBladeDir;
         }
     }
 
     $violations = [];
 
     foreach ($dirtyFiles as $file) {
-        // Only scan files that fall within one of our scan paths
+        // Decide which rules apply: full set when inside the main path,
+        // only the owning rules when inside an extra path. Files outside
+        // any scope (including blade files in $bladeDir) are handled
+        // separately below.
+        $rulesForFile = null;
         $inScope = false;
-        foreach ($scanPaths as $scanPath) {
-            if (str_starts_with($file, $scanPath)) {
-                $inScope = true;
-                break;
+
+        if ($mainScanPath !== null && str_starts_with($file, $mainScanPath)) {
+            $inScope = true;
+        } else {
+            foreach ($extraPathOwners as $owned => $owningRules) {
+                if (str_starts_with($file, $owned)) {
+                    $rulesForFile = $owningRules;
+                    $inScope = true;
+                    break;
+                }
             }
+        }
+
+        if (str_ends_with($file, '.blade.php')) {
+            if ($hasBladeRules && $bladeDir !== null && str_starts_with($file, $bladeDir)) {
+                $bladeViolations = $scanner->scanBladeFile($file, getcwd());
+                $violations = array_merge($violations, $bladeViolations);
+            }
+            continue;
         }
 
         if (! $inScope) {
             continue;
         }
 
-        if (str_ends_with($file, '.blade.php') && $hasBladeRules) {
-            $bladeViolations = $scanner->scanBladeFile($file, getcwd());
-            $violations = array_merge($violations, $bladeViolations);
-        } elseif (str_ends_with($file, '.php')) {
-            $fileViolations = $scanner->scan($file, getcwd());
+        if (str_ends_with($file, '.php')) {
+            $fileViolations = $scanner->scan($file, getcwd(), $rulesForFile);
             $violations = array_merge($violations, $fileViolations);
         }
     }
 } else {
     $violations = $scanner->scan($path, getcwd());
 
-    // Extra paths from rules (e.g., app/Models for enum rules)
+    // Extra paths from rules (e.g., tests/ for the deprecated-test-methods rule).
+    // Each extra path is scanned only with the rules that requested it, so that
+    // rules like deprecated-url-parameters do not mis-fire on test files.
     $extraPathRules = array_filter($scanner->getRules(), fn ($rule) => $rule instanceof ExtraPathRule);
 
     if (! empty($extraPathRules)) {
-        $extraPaths = [];
+        $extraPathOwners = [];
         foreach ($extraPathRules as $rule) {
             foreach ($rule->extraScanPaths() as $extraPath) {
-                $extraPaths[$extraPath] = true;
+                $extraPathOwners[$extraPath][] = $rule;
             }
         }
 
-        foreach (array_keys($extraPaths) as $extraPath) {
+        foreach ($extraPathOwners as $extraPath => $rulesForPath) {
             $fullPath = getcwd().DIRECTORY_SEPARATOR.$extraPath;
             // Skip if already covered by the main scan path
             if (is_dir($fullPath) && ! str_starts_with($fullPath, $path) && ! str_starts_with($path, $fullPath)) {
-                $extraViolations = $scanner->scan($fullPath, getcwd());
+                $extraViolations = $scanner->scan($fullPath, getcwd(), $rulesForPath);
                 $violations = array_merge($violations, $extraViolations);
             }
         }

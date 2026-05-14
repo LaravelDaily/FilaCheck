@@ -45,15 +45,17 @@ class ResourceScanner
     }
 
     /**
+     * @param  Rule[]|null  $rules  When provided, only these rules are applied to the scan
      * @return Violation[]
      */
-    public function scan(string $path, ?string $basePath = null): array
+    public function scan(string $path, ?string $basePath = null, ?array $rules = null): array
     {
         $violations = [];
         $files = $this->findPhpFiles($path);
+        $effectiveRules = $rules ?? $this->rules;
 
         foreach ($files as $file) {
-            $fileViolations = $this->scanFile($file, $basePath);
+            $fileViolations = $this->scanFile($file, $basePath, $effectiveRules);
             $violations = array_merge($violations, $fileViolations);
         }
 
@@ -180,9 +182,10 @@ class ResourceScanner
     }
 
     /**
+     * @param  Rule[]  $rules
      * @return Violation[]
      */
-    private function scanFile(SplFileInfo $file, ?string $basePath = null): array
+    private function scanFile(SplFileInfo $file, ?string $basePath, array $rules): array
     {
         $code = file_get_contents($file->getPathname());
         $filePath = $file->getPathname();
@@ -209,7 +212,6 @@ class ResourceScanner
         }
 
         $violations = [];
-        $rules = $this->rules;
 
         $traverser = new NodeTraverser;
         $traverser->addVisitor(new NameResolver);

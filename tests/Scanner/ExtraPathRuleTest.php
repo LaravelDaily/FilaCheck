@@ -117,6 +117,49 @@ it('scans extra path directory and finds violations', function () {
     expect($extraViolations[0]->file)->toBe('Models/Order.php');
 });
 
+it('applies only the requesting rules when scan() is given a rule subset', function () {
+    $testsDir = $this->tempDir.'/tests';
+    mkdir($testsDir, 0755, true);
+
+    file_put_contents($testsDir.'/SomeTest.php', '<?php $input->reactive();');
+
+    $scanner = new ResourceScanner;
+    $reactiveRule = new DeprecatedReactiveRule;
+    $extraPathRule = createExtraPathRule(['tests']);
+
+    $scanner->addRule($reactiveRule);
+    $scanner->addRule($extraPathRule);
+
+    // With no rule subset, every rule applies — both rules match reactive().
+    $allRulesViolations = $scanner->scan($testsDir, $this->tempDir);
+    $ruleNames = array_map(fn ($v) => $v->rule, $allRulesViolations);
+    expect($ruleNames)->toContain('deprecated-reactive');
+    expect($ruleNames)->toContain('test-extra-path-rule');
+
+    // Scoped to the extra-path rule only: deprecated-reactive does not fire.
+    $scopedViolations = $scanner->scan($testsDir, $this->tempDir, [$extraPathRule]);
+    $scopedRuleNames = array_map(fn ($v) => $v->rule, $scopedViolations);
+    expect($scopedRuleNames)->not->toContain('deprecated-reactive');
+    expect($scopedRuleNames)->toContain('test-extra-path-rule');
+});
+
+it('still runs the owning rule when scan() is scoped to it', function () {
+    $testsDir = $this->tempDir.'/tests';
+    mkdir($testsDir, 0755, true);
+
+    file_put_contents($testsDir.'/SomeTest.php', '<?php $input->reactive();');
+
+    $scanner = new ResourceScanner;
+    $extraPathRule = createExtraPathRule(['tests']);
+    $scanner->addRule(new DeprecatedReactiveRule);
+    $scanner->addRule($extraPathRule);
+
+    $violations = $scanner->scan($testsDir, $this->tempDir, [$extraPathRule]);
+
+    expect($violations)->toHaveCount(1);
+    expect($violations[0]->rule)->toBe('test-extra-path-rule');
+});
+
 it('skips extra path when already covered by main scan path', function () {
     $mainPath = $this->tempDir.'/app';
     $extraPath = $this->tempDir.'/app/Models';
