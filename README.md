@@ -83,7 +83,7 @@ All rules are enabled by default.
 
 ---
 
-## Available Rules (15 Free)
+## Available Rules (16 Free)
 
 FilaCheck includes the following rules for detecting deprecated code patterns and common issues:
 
@@ -94,7 +94,7 @@ FilaCheck includes the following rules for detecting deprecated code patterns an
 | `action-in-bulk-action-group` | Detects `Action::make()` inside `BulkActionGroup::make()` which should be `BulkAction::make()` | Yes |
 | `wrong-tab-namespace` | Detects wrong `Tab` namespace - should be `Filament\Schemas\Components\Tabs\Tab` | Yes |
 
-### Deprecated Code (13 rules)
+### Deprecated Code (14 rules)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
@@ -111,6 +111,7 @@ FilaCheck includes the following rules for detecting deprecated code patterns an
 | `deprecated-bulk-actions` | Detects `->bulkActions()` which should be replaced with `->toolbarActions()` | Yes |
 | `deprecated-url-parameters` | Detects deprecated URL parameters like `tableFilters`, `activeTab`, `tableSearch`, etc. | Yes |
 | `deprecated-test-methods` | Detects deprecated test methods like `setActionData()`, `mountTableAction()`, `assertFormSet()`, etc. | Partial |
+| `deprecated-image-editor-aspect-ratios` | Detects `->imageEditorAspectRatios()` on FileUpload which should be `->imageEditorAspectRatioOptions()` | Yes |
 
 ---
 
