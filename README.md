@@ -149,9 +149,9 @@ This makes FilaCheck perfect for CI pipelines.
 
 ## [FilaCheck Pro](https://filamentexamples.com/filacheck)
 
-**FilaCheck Pro** adds 18 additional rules for performance optimization, security, best practices, and UX suggestions.
+**FilaCheck Pro** adds 19 additional rules for performance optimization, security, best practices, and UX suggestions.
 
-### Performance Rules (4 rules)
+### Performance Rules (5 rules)
 
 | Rule | Description | Fixable |
 |------|-------------|---------|
@@ -159,6 +159,7 @@ This makes FilaCheck perfect for CI pipelines.
 | `large-option-list-searchable` | Suggests `->searchable()` for lists with 10+ options | No |
 | `heavy-closure-in-format-state` | Detects database queries inside `formatStateUsing()` closures that cause N+1 issues | No |
 | `stats-widget-polling-not-disabled` | Warns when `StatsOverviewWidget` uses the default 5-second polling interval | Yes |
+| `navigation-badge-not-cached` | Warns when `getNavigationBadge()` is not cached using the `Cache` facade or `cache()` helper | No |
 
 ### Security Rules (1 rule)
 
