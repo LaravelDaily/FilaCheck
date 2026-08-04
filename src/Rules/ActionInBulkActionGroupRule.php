@@ -44,7 +44,6 @@ class ActionInBulkActionGroupRule implements FixableRule, ProvidesAgentFix
 
         $violations = [];
         $nodeFinder = new NodeFinder;
-        $reported = [];
 
         $isActionMake = function (Node $n): bool {
             return $n instanceof StaticCall
@@ -54,7 +53,7 @@ class ActionInBulkActionGroupRule implements FixableRule, ProvidesAgentFix
                 && $n->name->name === 'make';
         };
 
-        // Check inside toolbarActions() for Action::make() in BulkActionGroup or directly
+        // Check inside toolbarActions() for Action::make() in BulkActionGroup.
         $toolbarActionsMethods = $nodeFinder->find($node, function (Node $n) {
             return $n instanceof MethodCall
                 && $n->name instanceof Identifier
@@ -80,39 +79,8 @@ class ActionInBulkActionGroupRule implements FixableRule, ProvidesAgentFix
                     $actionCalls = $nodeFinder->find($bulkActionGroup, $isActionMake);
 
                     foreach ($actionCalls as $actionCall) {
-                        $startPos = $actionCall->class->getStartFilePos();
-                        $reported[$startPos] = true;
-
                         $violations[] = $this->buildActionViolation($actionCall, $context);
                     }
-                }
-
-                // Exclude Action::make() inside ActionGroup::make() (not a BulkActionGroup)
-                $actionGroups = $nodeFinder->find($arg, function (Node $n) {
-                    return $n instanceof StaticCall
-                        && $n->class instanceof Name
-                        && class_basename($n->class->toString()) === 'ActionGroup'
-                        && $n->name instanceof Identifier
-                        && $n->name->name === 'make';
-                });
-
-                foreach ($actionGroups as $actionGroup) {
-                    foreach ($nodeFinder->find($actionGroup, $isActionMake) as $actionCall) {
-                        $reported[$actionCall->class->getStartFilePos()] = true;
-                    }
-                }
-
-                // Check Action::make() directly inside toolbarActions (not in BulkActionGroup or ActionGroup)
-                $actionCalls = $nodeFinder->find($arg, $isActionMake);
-
-                foreach ($actionCalls as $actionCall) {
-                    $startPos = $actionCall->class->getStartFilePos();
-
-                    if (isset($reported[$startPos])) {
-                        continue;
-                    }
-
-                    $violations[] = $this->buildActionViolation($actionCall, $context);
                 }
             }
         }
@@ -145,12 +113,11 @@ class ActionInBulkActionGroupRule implements FixableRule, ProvidesAgentFix
     public function agentFix(Violation $violation): mixed
     {
         return [
-            'instructions' => 'Replace `Action::make()` with `BulkAction::make()` whenever it appears inside `toolbarActions()` (directly or wrapped in a `BulkActionGroup`).',
+            'instructions' => 'Replace `Action::make()` with `BulkAction::make()` whenever it appears inside `BulkActionGroup::make()`.',
             'next_steps' => [
                 'Rename the `Action::make()` static call to `BulkAction::make()` — the rest of the chain stays the same.',
                 'Add `use Filament\Actions\BulkAction;` to the file (the rule emits a separate import violation for this when needed).',
-                'Do not rewrite `Action::make()` calls inside an `ActionGroup::make()` — those still belong to the per-row action group and are not bulk actions.',
-                'Single-record actions belong in `recordActions()`, not `toolbarActions()`. If the call was placed in the wrong slot, move it instead of changing its class.',
+                'Do not rewrite `Action::make()` calls outside `BulkActionGroup::make()`, including actions placed directly in `toolbarActions()`.',
             ],
             'docs' => $this->filamentDocsUrl('tables/actions#bulk-actions'),
         ];
@@ -164,7 +131,7 @@ class ActionInBulkActionGroupRule implements FixableRule, ProvidesAgentFix
 
         return new Violation(
             level: 'error',
-            message: '`Action::make()` is used inside `toolbarActions()`. Use `BulkAction::make()` instead.',
+            message: '`Action::make()` is used inside `BulkActionGroup::make()`. Use `BulkAction::make()` instead.',
             file: $context->file,
             line: $this->getLineFromPosition($context->code, $startPos),
             suggestion: 'Replace `Action::make()` with `BulkAction::make()`. See: ' . $this->filamentDocsUrl('tables/actions#bulk-actions'),
