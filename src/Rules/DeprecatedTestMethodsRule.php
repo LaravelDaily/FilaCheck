@@ -9,6 +9,7 @@ use Filacheck\Rules\Concerns\ResolvesFilamentDocsUrl;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
+use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Identifier;
 
@@ -21,14 +22,14 @@ class DeprecatedTestMethodsRule implements FixableRule, ExtraPathRule, ProvidesA
     use ResolvesFilamentDocsUrl;
 
     /**
-     * @var array<string, string|array{0: string, 1: string|array{0: string, 1: string}}>
+     * @var array<string, string|array{0: string, 1: string|array{0: string, 1: string}|array{0: string, 1: string, 2: string}}>
      */
     protected array $deprecatedMethods = [
         'setActionData' => ['fillForm()', 'fillForm'],
         'assertActionDataSet' => ['assertSchemaStateSet()', 'assertSchemaStateSet'],
         'assertHasActionErrors' => ['assertHasFormErrors()', 'assertHasFormErrors'],
         'assertHasNoActionErrors' => ['assertHasNoFormErrors()', 'assertHasNoFormErrors'],
-        'mountTableAction' => ['mountAction(TestAction::make(...)->table())', ['mountAction(TestAction::make(', ')->table())']],
+        'mountTableAction' => ['mountAction(TestAction::make(...)->table())', ['mountAction(TestAction::make(', ')->table(', '))']],
         'unmountTableAction' => ['unmountAction()', 'unmountAction'],
         'setTableActionData' => ['fillForm()', 'fillForm'],
         'assertTableActionDataSet' => ['assertSchemaStateSet()', 'assertSchemaStateSet'],
@@ -40,9 +41,9 @@ class DeprecatedTestMethodsRule implements FixableRule, ExtraPathRule, ProvidesA
         'assertTableActionHidden' => 'assertActionHidden(TestAction::make(...)->table($record))',
         'assertTableActionEnabled' => 'assertActionEnabled(TestAction::make(...)->table($record))',
         'assertTableActionDisabled' => 'assertActionDisabled(TestAction::make(...)->table($record))',
-        'assertTableActionMounted' => ['assertActionMounted(TestAction::make(...)->table())', ['assertActionMounted(TestAction::make(', ')->table())']],
+        'assertTableActionMounted' => ['assertActionMounted(TestAction::make(...)->table())', ['assertActionMounted(TestAction::make(', ')->table(', '))']],
         'assertTableActionNotMounted' => 'assertActionNotMounted(TestAction::make(...)->table(...))',
-        'assertTableActionHalted' => ['assertActionHalted(TestAction::make(...)->table())', ['assertActionHalted(TestAction::make(', ')->table())']],
+        'assertTableActionHalted' => ['assertActionHalted(TestAction::make(...)->table())', ['assertActionHalted(TestAction::make(', ')->table(', '))']],
         'assertHasTableActionErrors' => ['assertHasFormErrors()', 'assertHasFormErrors'],
         'assertHasNoTableActionErrors' => ['assertHasNoFormErrors()', 'assertHasNoFormErrors'],
         'mountTableBulkAction' => 'mountAction(TestAction::make(...)->table()->bulk())',
@@ -215,7 +216,7 @@ class DeprecatedTestMethodsRule implements FixableRule, ExtraPathRule, ProvidesA
     }
 
     /**
-     * @param  string|array{0: string, 1: string|array{0: string, 1: string}}  $deprecatedMethod
+     * @param  string|array{0: string, 1: string|array{0: string, 1: string}|array{0: string, 1: string, 2: string}}  $deprecatedMethod
      * @return array{startPos: int, endPos: int, replacement: string}|null
      */
     protected function getFix(MethodCall $node, string $code, string | array $deprecatedMethod): ?array
@@ -243,11 +244,77 @@ class DeprecatedTestMethodsRule implements FixableRule, ExtraPathRule, ProvidesA
             ];
         }
 
+        if (count($fix) === 2) {
+            return [
+                'startPos' => $node->name->getStartFilePos(),
+                'endPos' => $node->getEndFilePos() + 1,
+                'replacement' => $fix[0] . $args . $fix[1],
+            ];
+        }
+
+        $splitArguments = $this->splitFirstArgument($node, $code);
+
+        if ($splitArguments === null) {
+            return null;
+        }
+
         return [
             'startPos' => $node->name->getStartFilePos(),
             'endPos' => $node->getEndFilePos() + 1,
-            'replacement' => $fix[0] . $args . $fix[1],
+            'replacement' => $fix[0] . $splitArguments[0] . $fix[1] . $splitArguments[1] . $fix[2],
         ];
+    }
+
+    /**
+     * Split the call's arguments into the first argument and everything after it,
+     * using the AST for the boundary so that commas inside a later argument
+     * (`->mountTableAction('edit', $posts->firstWhere('slug', 'a'))`) do not split it.
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    protected function splitFirstArgument(MethodCall $node, string $code): ?array
+    {
+        $arguments = $node->args;
+
+        foreach ($arguments as $argument) {
+            if (! $argument instanceof Arg) {
+                return null;
+            }
+        }
+
+        if ($arguments === []) {
+            return ['', ''];
+        }
+
+        $firstArgument = $arguments[0];
+        $firstArgumentSource = substr(
+            $code,
+            $firstArgument->getStartFilePos(),
+            $firstArgument->getEndFilePos() - $firstArgument->getStartFilePos() + 1,
+        );
+
+        if ($firstArgumentSource === false) {
+            return null;
+        }
+
+        if (count($arguments) === 1) {
+            return [$firstArgumentSource, ''];
+        }
+
+        $remainingArgumentsStart = $arguments[1]->getStartFilePos();
+        $remainingArgumentsEnd = $arguments[count($arguments) - 1]->getEndFilePos();
+
+        $remainingArgumentsSource = substr(
+            $code,
+            $remainingArgumentsStart,
+            $remainingArgumentsEnd - $remainingArgumentsStart + 1,
+        );
+
+        if ($remainingArgumentsSource === false) {
+            return null;
+        }
+
+        return [$firstArgumentSource, $remainingArgumentsSource];
     }
 
     protected function getArgumentsSource(MethodCall $node, string $code): ?string

@@ -267,6 +267,30 @@ dataset('fixableDeprecatedTestMethods', [
         '->assertHasNoFormErrors()',
         false,
     ],
+    'mountTableAction with a record' => [
+        '->mountTableAction(\'edit\', $record)',
+        'Use `mountAction(TestAction::make(...)->table())` instead.',
+        '->mountAction(TestAction::make(\'edit\')->table($record))',
+        true,
+    ],
+    'assertTableActionMounted with a record' => [
+        '->assertTableActionMounted(\'edit\', $record)',
+        'Use `assertActionMounted(TestAction::make(...)->table())` instead.',
+        '->assertActionMounted(TestAction::make(\'edit\')->table($record))',
+        true,
+    ],
+    'assertTableActionHalted with a record' => [
+        '->assertTableActionHalted(\'edit\', $record)',
+        'Use `assertActionHalted(TestAction::make(...)->table())` instead.',
+        '->assertActionHalted(TestAction::make(\'edit\')->table($record))',
+        true,
+    ],
+    'mountTableAction with a record expression containing a comma' => [
+        '->mountTableAction(\'edit\', $posts->firstWhere(\'slug\', \'hello\'))',
+        'Use `mountAction(TestAction::make(...)->table())` instead.',
+        '->mountAction(TestAction::make(\'edit\')->table($posts->firstWhere(\'slug\', \'hello\')))',
+        true,
+    ],
 ]);
 
 dataset('nonFixableDeprecatedTestMethods', [
