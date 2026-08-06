@@ -1,12 +1,21 @@
 <?php
 
 use Filacheck\Support\GitDirtyFiles;
+use Symfony\Component\Process\Process;
 
 beforeEach(function () {
     $this->tempDir = sys_get_temp_dir().'/filacheck-git-dirty-test-'.uniqid();
     mkdir($this->tempDir, 0755, true);
-    exec('git init '.$this->tempDir);
-    exec('cd '.$this->tempDir.' && git config user.email "test@test.com" && git config user.name "Test"');
+    (new Process([
+        'git',
+        'init',
+        '--quiet',
+        '--initial-branch=main',
+        $this->tempDir,
+    ]))->mustRun();
+    (new Process(['git', 'config', 'user.email', 'test@test.com'], $this->tempDir))->mustRun();
+    (new Process(['git', 'config', 'user.name', 'Test'], $this->tempDir))->mustRun();
+    (new Process(['git', 'config', 'commit.gpgSign', 'false'], $this->tempDir))->mustRun();
 });
 
 afterEach(function () {
