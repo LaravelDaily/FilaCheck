@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Blade;
 use Laravel\Boost\BoostServiceProvider;
 use Laravel\Boost\Install\GuidelineAssist;
 use Laravel\Boost\Install\GuidelineConfig;
-use Laravel\Roster\Roster;
+use Laravel\Roster\ProjectManager;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 class BoostTestCase extends OrchestraTestCase
@@ -26,8 +26,8 @@ class BoostTestCase extends OrchestraTestCase
         $config = new GuidelineConfig;
         $config->usesSail = $usesSail;
 
-        $roster = \Mockery::mock(Roster::class);
-        $assist = new GuidelineAssist($roster, $config);
+        $project = \Mockery::mock(ProjectManager::class);
+        $assist = new GuidelineAssist($project, $config);
 
         $template = file_get_contents(
             realpath(__DIR__.'/../../resources/boost/guidelines/core.blade.php')
