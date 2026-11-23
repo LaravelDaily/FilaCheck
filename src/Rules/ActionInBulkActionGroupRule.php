@@ -22,6 +22,13 @@ class ActionInBulkActionGroupRule implements FixableRule, ProvidesAgentFix
     use CalculatesLineNumbers;
     use ResolvesFilamentDocsUrl;
 
+    private const BULK_ACTION_CLASS = 'Filament\Actions\BulkAction';
+
+    private const LEGACY_BULK_ACTION_CLASS = 'Filament\Tables\Actions\BulkAction';
+
+    /** @var array<string, true> */
+    private array $legacyImportRenamedForFiles = [];
+
     public function name(): string
     {
         return 'action-in-bulk-action-group';
@@ -85,15 +92,54 @@ class ActionInBulkActionGroupRule implements FixableRule, ProvidesAgentFix
             }
         }
 
-        if (! empty($violations)) {
-            $importViolation = $this->buildImportViolation(
-                'use Filament\Actions\BulkAction;',
-                $context,
-            );
+        if (empty($violations)) {
+            return [];
+        }
 
-            if ($importViolation !== null) {
-                $violations[] = $importViolation;
+        // Only a plain `use` of the legacy class under the `BulkAction` name can be
+        // rewritten in place; anything else imported as `BulkAction` is a conflict.
+        $legacyImport = $this->renameableLegacyImport(self::LEGACY_BULK_ACTION_CLASS, self::BULK_ACTION_CLASS, $context);
+        $compatible = $legacyImport !== null ? [self::LEGACY_BULK_ACTION_CLASS] : [];
+        $conflict = $this->conflictingImport(self::BULK_ACTION_CLASS, $context, $compatible);
+
+        if ($conflict !== null) {
+            foreach ($violations as $violation) {
+                $violation->isFixable = false;
+                $violation->startPos = null;
+                $violation->endPos = null;
+                $violation->replacement = null;
+                $violation->suggestion = "Fix manually: the short name `BulkAction` is already imported as `{$conflict}`. " . $violation->suggestion;
             }
+
+            return $violations;
+        }
+
+        if ($legacyImport !== null) {
+            // The v3 `Filament\Tables\Actions\BulkAction` import no longer exists in
+            // v4+, so rewrite it in place instead of adding a second `BulkAction`.
+            if (! isset($this->legacyImportRenamedForFiles[$context->file])) {
+                $this->legacyImportRenamedForFiles[$context->file] = true;
+
+                $violations[] = new Violation(
+                    level: 'warning',
+                    message: 'Replacing legacy import `' . self::LEGACY_BULK_ACTION_CLASS . '`.',
+                    file: $context->file,
+                    line: $this->getLineFromPosition($context->code, $legacyImport['startPos']),
+                    isFixable: true,
+                    startPos: $legacyImport['startPos'],
+                    endPos: $legacyImport['endPos'],
+                    replacement: self::BULK_ACTION_CLASS,
+                    silent: true,
+                );
+            }
+
+            return $violations;
+        }
+
+        $importViolation = $this->buildImportViolation(self::BULK_ACTION_CLASS, $context);
+
+        if ($importViolation !== null) {
+            $violations[] = $importViolation;
         }
 
         return $violations;
@@ -116,7 +162,7 @@ class ActionInBulkActionGroupRule implements FixableRule, ProvidesAgentFix
             'instructions' => 'Replace `Action::make()` with `BulkAction::make()` whenever it appears inside `BulkActionGroup::make()`.',
             'next_steps' => [
                 'Rename the `Action::make()` static call to `BulkAction::make()` — the rest of the chain stays the same.',
-                'Add `use Filament\Actions\BulkAction;` to the file (the rule emits a separate import violation for this when needed).',
+                'Make sure the file imports `Filament\Actions\BulkAction`: rewrite a leftover v3 `use Filament\Tables\Actions\BulkAction;` to it, or add `use Filament\Actions\BulkAction;` if `BulkAction` is not imported yet.',
                 'Do not rewrite `Action::make()` calls outside `BulkActionGroup::make()`, including actions placed directly in `toolbarActions()`.',
             ],
             'docs' => $this->filamentDocsUrl('tables/actions#bulk-actions'),

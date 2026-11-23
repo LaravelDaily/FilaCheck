@@ -421,3 +421,62 @@ PHP;
     expect($fixedCode)->toBe($code);
     expect($fixedCode)->not->toContain('use Filament\Actions\BulkAction;');
 });
+
+function bulkActionFixture(string $imports): string
+{
+    return <<<PHP
+<?php
+
+namespace App\Filament;
+
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+{$imports}
+use Filament\Tables\Table;
+
+class UsersTable
+{
+    public static function configure(Table \$table): Table
+    {
+        return \$table
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    Action::make('export'),
+                ]),
+            ]);
+    }
+}
+PHP;
+}
+
+it('rewrites the legacy Tables BulkAction import instead of adding a second BulkAction import', function () {
+    $code = bulkActionFixture('use Filament\Tables\Actions\BulkAction;');
+
+    $fixedCode = $this->scanAndFix(new ActionInBulkActionGroupRule, $code);
+
+    expect($fixedCode)->toContain('BulkAction::make(\'export\')');
+    expect($fixedCode)->not->toContain('use Filament\Tables\Actions\BulkAction;');
+    expect(substr_count($fixedCode, 'use Filament\Actions\BulkAction;'))->toBe(1);
+    $this->assertCodeResolves($fixedCode);
+});
+
+it('reuses an existing Filament\Actions\BulkAction import', function () {
+    $code = bulkActionFixture('use Filament\Actions\BulkAction;');
+
+    $fixedCode = $this->scanAndFix(new ActionInBulkActionGroupRule, $code);
+
+    expect(substr_count($fixedCode, 'use Filament\Actions\BulkAction;'))->toBe(1);
+    $this->assertCodeResolves($fixedCode);
+});
+
+it('requires a manual fix when BulkAction is imported from an unrelated class', function () {
+    $code = bulkActionFixture('use App\Actions\BulkAction;');
+
+    $violations = $this->scanCode(new ActionInBulkActionGroupRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+    expect($violations[0]->isFixable)->toBeFalse();
+    expect($violations[0]->suggestion)->toContain('App\Actions\BulkAction');
+
+    expect($this->scanAndFix(new ActionInBulkActionGroupRule, $code))->toBe($code);
+});

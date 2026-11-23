@@ -6,6 +6,9 @@ use Filacheck\Fixer\CodeFixer;
 use Filacheck\Rules\Rule;
 use Filacheck\Scanner\ResourceScanner;
 use Filacheck\Support\Violation;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitor\NameResolver;
+use PhpParser\ParserFactory;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -107,5 +110,20 @@ abstract class TestCase extends BaseTestCase
                 "Violation '{$violation->message}' is not marked as fixable"
             );
         }
+    }
+
+    /**
+     * Assert the code parses and its names resolve, which is where PHP rejects
+     * problems like two imports sharing a short name.
+     */
+    protected function assertCodeResolves(string $code): void
+    {
+        $ast = (new ParserFactory)->createForNewestSupportedVersion()->parse($code);
+
+        $traverser = new NodeTraverser;
+        $traverser->addVisitor(new NameResolver);
+        $traverser->traverse($ast);
+
+        $this->addToAssertionCount(1);
     }
 }

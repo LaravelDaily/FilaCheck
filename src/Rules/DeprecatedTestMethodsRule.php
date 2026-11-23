@@ -200,10 +200,19 @@ class DeprecatedTestMethodsRule implements FixableRule, ExtraPathRule, ProvidesA
                 continue;
             }
 
-            $importViolation = $this->buildImportViolation(
-                'use Filament\Actions\Testing\TestAction;',
-                $context,
-            );
+            $conflict = $this->conflictingImport('Filament\Actions\Testing\TestAction', $context);
+
+            if ($conflict !== null) {
+                $violation->isFixable = false;
+                $violation->startPos = null;
+                $violation->endPos = null;
+                $violation->replacement = null;
+                $violation->suggestion = "Fix manually: the short name `TestAction` is already imported as `{$conflict}`. " . $violation->suggestion;
+
+                break;
+            }
+
+            $importViolation = $this->buildImportViolation('Filament\Actions\Testing\TestAction', $context);
 
             if ($importViolation !== null) {
                 $violations[] = $importViolation;
