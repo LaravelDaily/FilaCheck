@@ -6,7 +6,11 @@ use Filacheck\Rules\BladeRule;
 use Filacheck\Rules\Rule;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
+use PhpParser\Error;
 use PhpParser\Node;
+use PhpParser\Node\Stmt\GroupUse;
+use PhpParser\Node\Stmt\Use_;
+use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\NodeVisitorAbstract;
@@ -195,12 +199,6 @@ class ResourceScanner
             $filePath = substr($filePath, strlen($basePath) + 1);
         }
 
-        $context = new Context(
-            file: $filePath,
-            code: $code,
-            basePath: $basePath,
-        );
-
         try {
             $ast = $this->parser->parse($code);
         } catch (Throwable) {
@@ -210,6 +208,13 @@ class ResourceScanner
         if ($ast === null) {
             return [];
         }
+
+        $context = new Context(
+            file: $filePath,
+            code: $code,
+            basePath: $basePath,
+            imports: $this->collectImports($ast),
+        );
 
         $violations = [];
 
@@ -237,8 +242,52 @@ class ResourceScanner
             }
         });
 
-        $traverser->traverse($ast);
+        try {
+            $traverser->traverse($ast);
+        } catch (Error) {
+            // The name resolver rejects files PHP itself would refuse to load,
+            // e.g. two imports sharing a short name. Skip them like parse errors.
+            return [];
+        }
 
         return $violations;
+    }
+
+    /**
+     * @param  Node[]  $ast
+     * @return array<string, array{name: string, alias: string, startPos: ?int, endPos: ?int}>
+     */
+    private function collectImports(array $ast): array
+    {
+        $imports = [];
+
+        $useNodes = (new NodeFinder)->find(
+            $ast,
+            fn (Node $node) => $node instanceof Use_ || $node instanceof GroupUse,
+        );
+
+        foreach ($useNodes as $useNode) {
+            foreach ($useNode->uses as $use) {
+                $type = $useNode->type !== Use_::TYPE_UNKNOWN ? $useNode->type : $use->type;
+
+                if ($type !== Use_::TYPE_NORMAL) {
+                    continue;
+                }
+
+                $isGroup = $useNode instanceof GroupUse;
+                $alias = $use->getAlias()->toString();
+
+                $imports[strtolower($alias)] = [
+                    'name' => $isGroup
+                        ? $useNode->prefix->toString().'\\'.$use->name->toString()
+                        : $use->name->toString(),
+                    'alias' => $alias,
+                    'startPos' => $isGroup ? null : $use->name->getStartFilePos(),
+                    'endPos' => $isGroup ? null : $use->name->getEndFilePos() + 1,
+                ];
+            }
+        }
+
+        return $imports;
     }
 }

@@ -227,3 +227,54 @@ PHP;
 
     $this->assertViolationIsFixable($violations);
 });
+
+it('requires a manual fix for Tabs\Tab::make() when Tab is imported from an unrelated class', function () {
+    $code = <<<'PHP'
+<?php
+
+namespace App\Filament;
+
+use App\Support\Tab;
+use Filament\Schemas\Components\Tabs;
+
+class TestResource
+{
+    public function tabs(): array
+    {
+        return [Tabs\Tab::make('General')];
+    }
+}
+PHP;
+
+    $violations = $this->scanCode(new WrongTabNamespaceRule, $code);
+
+    $this->assertViolationCount(1, $violations);
+    expect($violations[0]->isFixable)->toBeFalse();
+    expect($violations[0]->suggestion)->toContain('App\Support\Tab');
+
+    expect($this->scanAndFix(new WrongTabNamespaceRule, $code))->toBe($code);
+});
+
+it('does not add a second Tab import when a legacy Filament Tab import is renamed', function () {
+    $code = <<<'PHP'
+<?php
+
+namespace App\Filament;
+
+use Filament\Forms\Components\Tabs;
+use Filament\Forms\Components\Tabs\Tab;
+
+class TestResource
+{
+    public function tabs(): array
+    {
+        return [Tabs\Tab::make('General'), Tab::make('Other')];
+    }
+}
+PHP;
+
+    $fixedCode = $this->scanAndFix(new WrongTabNamespaceRule, $code);
+
+    expect(substr_count($fixedCode, 'use Filament\Schemas\Components\Tabs\Tab;'))->toBe(1);
+    $this->assertCodeResolves($fixedCode);
+});

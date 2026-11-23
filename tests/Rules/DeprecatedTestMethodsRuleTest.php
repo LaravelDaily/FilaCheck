@@ -446,3 +446,26 @@ PHP;
 
     $this->assertNoViolations($violations);
 });
+
+it('requires a manual fix when TestAction is imported from an unrelated class', function () {
+    $code = <<<'PHP'
+<?php
+
+use App\Testing\TestAction;
+
+livewire(TestComponent::class)
+    ->mountTableAction('header_with_form')
+    ->assertTableActionMounted('header_with_form');
+PHP;
+
+    $violations = $this->scanCode(new DeprecatedTestMethodsRule, $code);
+
+    $this->assertViolationCount(2, $violations);
+
+    foreach ($violations as $violation) {
+        expect($violation->isFixable)->toBeFalse();
+        expect($violation->suggestion)->toContain('App\Testing\TestAction');
+    }
+
+    expect($this->scanAndFix(new DeprecatedTestMethodsRule, $code))->toBe($code);
+});

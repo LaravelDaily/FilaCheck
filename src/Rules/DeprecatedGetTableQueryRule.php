@@ -23,6 +23,10 @@ class DeprecatedGetTableQueryRule implements FixableRule, ProvidesAgentFix
     use CalculatesLineNumbers;
     use ResolvesFilamentDocsUrl;
 
+    private const BUILDER_CLASS = 'Illuminate\Database\Eloquent\Builder';
+
+    private const BUILDER_CONTRACT = 'Illuminate\Contracts\Database\Eloquent\Builder';
+
     public function name(): string
     {
         return 'deprecated-get-table-query';
@@ -107,6 +111,22 @@ class DeprecatedGetTableQueryRule implements FixableRule, ProvidesAgentFix
             $returnExpr->getEndFilePos() - $returnExpr->getStartFilePos() + 1
         );
 
+        // `fn (): Builder` is satisfied by the Eloquent builder or by its contract,
+        // which the Eloquent builder implements, so either existing import works.
+        $conflict = $this->conflictingImport(self::BUILDER_CLASS, $context, [self::BUILDER_CONTRACT]);
+
+        if ($conflict !== null) {
+            return [
+                new Violation(
+                    level: 'warning',
+                    message: 'The `getTableQuery()` method is deprecated.',
+                    file: $context->file,
+                    line: $line,
+                    suggestion: "Fix manually: the short name `Builder` is already imported as `{$conflict}`. Move the query to `->query()` inside the `table(Table \$table)` method. See: " . $this->filamentDocsUrl('components/table'),
+                ),
+            ];
+        }
+
         $indent = $this->getChainIndentation($context->code, $tableMethod);
 
         $violations = [];
@@ -126,7 +146,7 @@ class DeprecatedGetTableQueryRule implements FixableRule, ProvidesAgentFix
         );
 
         // Violation 2: Add Builder import if missing
-        $importViolation = $this->buildImportViolation('use Illuminate\Database\Eloquent\Builder;', $context);
+        $importViolation = $this->buildImportViolation(self::BUILDER_CLASS, $context);
         if ($importViolation) {
             $violations[] = $importViolation;
         }
@@ -250,9 +270,34 @@ class DeprecatedGetTableQueryRule implements FixableRule, ProvidesAgentFix
     /**
      * @return array{int, int}
      */
-    private function getCleanDeleteRange(string $code, ClassMethod $method): array
+    /**
+     * PHP-Parser doesn't count comments as part of a method, so deleting from the
+     * method's own start would leave its comments behind. A `//` comment directly
+     * above would then swallow the class's closing brace. Extend the start to the
+     * first comment of the uninterrupted run of own-line comments above the method.
+     */
+    private function getStartIncludingLeadingComments(string $code, ClassMethod $method): int
     {
         $start = $method->getStartFilePos();
+
+        foreach (array_reverse($method->getComments()) as $comment) {
+            $commentStart = $comment->getStartFilePos();
+            $lineStart = strrpos(substr($code, 0, $commentStart), "\n");
+            $lineStart = $lineStart === false ? 0 : $lineStart + 1;
+
+            if (trim(substr($code, $lineStart, $commentStart - $lineStart)) !== '') {
+                break;
+            }
+
+            $start = $commentStart;
+        }
+
+        return $start;
+    }
+
+    private function getCleanDeleteRange(string $code, ClassMethod $method): array
+    {
+        $start = $this->getStartIncludingLeadingComments($code, $method);
         $end = $method->getEndFilePos() + 1;
 
         // Extend backward past leading whitespace to start of line

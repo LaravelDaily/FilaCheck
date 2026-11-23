@@ -22,8 +22,6 @@ class WrongTabNamespaceRule implements FixableRule, ProvidesAgentFix
 
     private const CORRECT_NAMESPACE = 'Filament\Schemas\Components\Tabs\Tab';
 
-    private array $filesWithTabImport = [];
-
     public function name(): string
     {
         return 'wrong-tab-namespace';
@@ -60,12 +58,8 @@ class WrongTabNamespaceRule implements FixableRule, ProvidesAgentFix
             }
 
             if ($name === self::CORRECT_NAMESPACE) {
-                $this->filesWithTabImport[$context->file] = true;
-
                 continue;
             }
-
-            $this->filesWithTabImport[$context->file] = true;
 
             if (str_starts_with($name, 'Filament\\')) {
 
@@ -101,6 +95,20 @@ class WrongTabNamespaceRule implements FixableRule, ProvidesAgentFix
         $violations = [];
 
         if ($originalClassName === 'Tabs\Tab') {
+            $conflict = $this->conflictingImport(self::CORRECT_NAMESPACE, $context, $this->tabImportsRenamedByThisRule($context));
+
+            if ($conflict !== null) {
+                return [
+                    new Violation(
+                        level: 'warning',
+                        message: 'v3-style `Tabs\Tab::make()` usage detected. Use `Tab::make()` with the correct import instead.',
+                        file: $context->file,
+                        line: $this->getLineFromPosition($context->code, $startPos),
+                        suggestion: "Fix manually: the short name `Tab` is already imported as `{$conflict}`. See: " . $this->filamentDocsUrl('schemas/tabs'),
+                    ),
+                ];
+            }
+
             $violations[] = new Violation(
                 level: 'warning',
                 message: 'v3-style `Tabs\Tab::make()` usage detected. Use `Tab::make()` with the correct import instead.',
@@ -113,36 +121,43 @@ class WrongTabNamespaceRule implements FixableRule, ProvidesAgentFix
                 replacement: 'Tab',
             );
 
-            if (! isset($this->filesWithTabImport[$context->file])) {
-                $importViolation = $this->buildImportViolation(
-                    'use Filament\Schemas\Components\Tabs\Tab;',
-                    $context,
-                );
+            $importViolation = $this->buildImportViolation(self::CORRECT_NAMESPACE, $context);
 
-                if ($importViolation !== null) {
-                    $violations[] = $importViolation;
-                }
+            if ($importViolation !== null) {
+                $violations[] = $importViolation;
             }
 
             return $violations;
         }
 
         if ($originalClassName === 'Tab') {
-            if (! isset($this->filesWithTabImport[$context->file])) {
-                $importViolation = $this->buildImportViolation(
-                    'use Filament\Schemas\Components\Tabs\Tab;',
-                    $context,
-                );
+            $importViolation = $this->buildImportViolation(self::CORRECT_NAMESPACE, $context);
 
-                if ($importViolation !== null) {
-                    $violations[] = $importViolation;
-                }
+            if ($importViolation !== null) {
+                $violations[] = $importViolation;
             }
 
             return $violations;
         }
 
         return [];
+    }
+
+    /**
+     * Plain `use Filament\...\Tab;` imports are renamed to the correct namespace
+     * by `checkImport()`, so they already provide the `Tab` short name.
+     *
+     * @return string[]
+     */
+    private function tabImportsRenamedByThisRule(Context $context): array
+    {
+        $import = $context->imports['tab'] ?? null;
+
+        if ($import === null || $import['startPos'] === null || ! str_starts_with($import['name'], 'Filament\\')) {
+            return [];
+        }
+
+        return [$import['name']];
     }
 
     public function agentFix(Violation $violation): mixed

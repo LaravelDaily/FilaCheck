@@ -44,3 +44,20 @@ it('does not scan sibling files when a single file path is provided', function (
     expect($violations)->toHaveCount(1);
     expect($violations[0]->file)->toBe('OrderForm.php');
 });
+
+it('skips a file whose imports share a short name instead of crashing', function () {
+    $file = $this->tempDir . '/ListUsers.php';
+    file_put_contents($file, <<<'PHP'
+<?php
+
+use Illuminate\Contracts\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder;
+
+$input->reactive();
+PHP);
+
+    $scanner = new ResourceScanner;
+    $scanner->addRule(new DeprecatedReactiveRule);
+
+    expect($scanner->scan($file, $this->tempDir))->toBe([]);
+});

@@ -9,6 +9,7 @@ use Filacheck\Rules\Concerns\ResolvesFilamentDocsUrl;
 use Filacheck\Support\Context;
 use Filacheck\Support\Violation;
 use PhpParser\Node;
+use PhpParser\Node\Expr\ArrowFunction;
 use PhpParser\Node\Expr\Closure;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Use_;
@@ -18,6 +19,10 @@ class DeprecatedFormsGetRule implements FixableRule, ProvidesAgentFix
     use AddsImport;
     use CalculatesLineNumbers;
     use ResolvesFilamentDocsUrl;
+
+    private const NEW_CLASS = 'Filament\Schemas\Components\Utilities\Get';
+
+    private const OLD_CLASS = 'Filament\Forms\Get';
 
     public function name(): string
     {
@@ -35,7 +40,7 @@ class DeprecatedFormsGetRule implements FixableRule, ProvidesAgentFix
             return $this->checkImport($node, $context);
         }
 
-        if ($node instanceof Closure) {
+        if ($node instanceof Closure || $node instanceof ArrowFunction) {
             return $this->checkClosure($node, $context);
         }
 
@@ -47,7 +52,7 @@ class DeprecatedFormsGetRule implements FixableRule, ProvidesAgentFix
         $violations = [];
 
         foreach ($node->uses as $use) {
-            if ($use->name->toString() === 'Filament\Forms\Get') {
+            if ($use->name->toString() === self::OLD_CLASS) {
                 $startPos = $use->name->getStartFilePos();
                 $endPos = $use->name->getEndFilePos() + 1;
 
@@ -60,7 +65,7 @@ class DeprecatedFormsGetRule implements FixableRule, ProvidesAgentFix
                     isFixable: true,
                     startPos: $startPos,
                     endPos: $endPos,
-                    replacement: 'Filament\Schemas\Components\Utilities\Get',
+                    replacement: self::NEW_CLASS,
                 );
             }
         }
@@ -68,7 +73,7 @@ class DeprecatedFormsGetRule implements FixableRule, ProvidesAgentFix
         return $violations;
     }
 
-    private function checkClosure(Closure $node, Context $context): array
+    private function checkClosure(Closure | ArrowFunction $node, Context $context): array
     {
         $violations = [];
 
@@ -81,23 +86,41 @@ class DeprecatedFormsGetRule implements FixableRule, ProvidesAgentFix
             ) {
                 $startPos = $param->type->getStartFilePos();
                 $endPos = $param->type->getEndFilePos() + 1;
+                $line = $this->getLineFromPosition($context->code, $startPos);
+                $suggestion = 'Use `Filament\Schemas\Components\Utilities\Get $get` instead of `callable $get`. See: ' . $this->filamentDocsUrl('forms/overview#injecting-the-state-of-another-field');
+
+                // The old `Filament\Forms\Get` import is renamed to the new class by this
+                // same rule, so it already provides the `Get` short name.
+                $compatible = $this->renameableLegacyImport(self::OLD_CLASS, self::NEW_CLASS, $context) !== null
+                    ? [self::OLD_CLASS]
+                    : [];
+                $conflict = $this->conflictingImport(self::NEW_CLASS, $context, $compatible);
+
+                if ($conflict !== null) {
+                    $violations[] = new Violation(
+                        level: 'warning',
+                        message: 'Parameter `$get` should be typed as `Get` instead of `callable`.',
+                        file: $context->file,
+                        line: $line,
+                        suggestion: "Fix manually: the short name `Get` is already imported as `{$conflict}`. " . $suggestion,
+                    );
+
+                    continue;
+                }
 
                 $violations[] = new Violation(
                     level: 'warning',
                     message: 'Parameter `$get` should be typed as `Get` instead of `callable`.',
                     file: $context->file,
-                    line: $this->getLineFromPosition($context->code, $startPos),
-                    suggestion: 'Use `Filament\Schemas\Components\Utilities\Get $get` instead of `callable $get`. See: ' . $this->filamentDocsUrl('forms/overview#injecting-the-state-of-another-field'),
+                    line: $line,
+                    suggestion: $suggestion,
                     isFixable: true,
                     startPos: $startPos,
                     endPos: $endPos,
                     replacement: 'Get',
                 );
 
-                $importViolation = $this->buildImportViolation(
-                    'use Filament\Schemas\Components\Utilities\Get;',
-                    $context,
-                );
+                $importViolation = $this->buildImportViolation(self::NEW_CLASS, $context);
 
                 if ($importViolation !== null) {
                     $violations[] = $importViolation;
