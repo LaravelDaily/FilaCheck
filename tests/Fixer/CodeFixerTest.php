@@ -290,7 +290,7 @@ it('runs a command-style fix and counts it as fixed', function () {
             file: $project.'/some/blade.blade.php',
             line: 1,
             isFixable: true,
-            fixCommand: 'touch '.escapeshellarg($marker),
+            fixCommand: [PHP_BINARY, '-r', 'touch($argv[1]);', $marker],
             fixCommandCwd: $project,
         ),
     ];
@@ -302,6 +302,10 @@ it('runs a command-style fix and counts it as fixed', function () {
     expect($results['commands'])->toHaveCount(1);
     expect($results['commands'][0]['status'])->toBe('ran');
     expect($results['commands'][0]['violations'])->toBe(1);
+    expect(array_keys($results['commands'][0]))->toBe(['command', 'cwd', 'status', 'output', 'violations']);
+    expect($results['commands'][0]['command'])->toBeString()->not->toBeEmpty();
+    expect($results['commands'][0]['cwd'])->toBe($project);
+    expect($results['commands'][0]['output'])->toBeString();
     expect(file_exists($marker))->toBeTrue();
 
     @unlink($marker);
@@ -320,7 +324,7 @@ it('does not execute command-style fixes during dry run', function () {
             file: $project.'/some/blade.blade.php',
             line: 1,
             isFixable: true,
-            fixCommand: 'touch '.escapeshellarg($marker),
+            fixCommand: [PHP_BINARY, '-r', 'touch($argv[1]);', $marker],
             fixCommandCwd: $project,
         ),
     ];
@@ -340,7 +344,7 @@ it('dedupes identical command-style fixes across multiple violations', function 
     $project = makeCommandFixture($this->tempDir);
     $counter = $this->tempDir.'/counter-'.uniqid();
 
-    $cmd = 'sh -c '.escapeshellarg('printf x >> '.escapeshellarg($counter));
+    $cmd = [PHP_BINARY, '-r', 'file_put_contents($argv[1], "x", FILE_APPEND);', $counter];
 
     $violations = [
         new Violation(
@@ -394,7 +398,7 @@ it('marks failed command-style fixes as skipped', function () {
             file: $project.'/blade.blade.php',
             line: 1,
             isFixable: true,
-            fixCommand: 'sh -c "exit 7"',
+            fixCommand: [PHP_BINARY, '-r', 'exit(7);'],
             fixCommandCwd: $project,
         ),
     ];
@@ -410,6 +414,72 @@ it('marks failed command-style fixes as skipped', function () {
     @rmdir($project);
 });
 
+it('skips unavailable executables and continues with other commands', function () {
+    $project = makeCommandFixture($this->tempDir);
+    $violations = [];
+
+    foreach ([[$project.'/missing-executable'], [$project.'/missing-executable'], [PHP_BINARY, '-r', 'echo "ran";']] as $command) {
+        $violations[] = new Violation(
+            level: 'warning',
+            message: 'command execution',
+            file: $project.'/blade.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: $command,
+            fixCommandCwd: $project,
+        );
+    }
+
+    try {
+        $results = (new CodeFixer)->fix($violations);
+
+        expect($results['fixed'])->toBe(1);
+        expect($results['skipped'])->toBe(2);
+        expect($results['commands'])->toHaveCount(2);
+        expect($results['commands'][0]['status'])->toBe('failed');
+        expect($results['commands'][0]['violations'])->toBe(2);
+        expect($results['commands'][0]['output'])->toBeString()->not->toBeEmpty();
+        expect($results['commands'][1]['status'])->toBe('ran');
+        expect($results['commands'][1]['output'])->toBe('ran');
+    } finally {
+        unlink($project.'/artisan');
+        rmdir($project);
+    }
+});
+
+it('runs identical commands separately in distinct working directories', function () {
+    $projects = [makeCommandFixture($this->tempDir), makeCommandFixture($this->tempDir)];
+    $violations = [];
+
+    foreach ($projects as $project) {
+        $violations[] = new Violation(
+            level: 'warning',
+            message: 'working directory',
+            file: $project.'/blade.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: [PHP_BINARY, '-r', 'echo getcwd();'],
+            fixCommandCwd: $project,
+        );
+    }
+
+    try {
+        $results = (new CodeFixer)->fix($violations);
+
+        expect($results['fixed'])->toBe(2);
+        expect($results['skipped'])->toBe(0);
+        expect($results['commands'])->toHaveCount(2);
+        expect(array_column($results['commands'], 'status'))->toBe(['ran', 'ran']);
+        expect(array_column($results['commands'], 'cwd'))->toBe($projects);
+        expect(array_column($results['commands'], 'output'))->toBe(array_map('realpath', $projects));
+    } finally {
+        foreach ($projects as $project) {
+            unlink($project.'/artisan');
+            rmdir($project);
+        }
+    }
+});
+
 it('refuses to run command-style fixes when cwd has no artisan', function () {
     $bare = $this->tempDir.'/bare-'.uniqid();
     mkdir($bare, 0755, true);
@@ -422,7 +492,7 @@ it('refuses to run command-style fixes when cwd has no artisan', function () {
             file: $bare.'/blade.blade.php',
             line: 1,
             isFixable: true,
-            fixCommand: 'touch '.escapeshellarg($marker),
+            fixCommand: [PHP_BINARY, '-r', 'touch($argv[1]);', $marker],
             fixCommandCwd: $bare,
         ),
     ];
@@ -438,6 +508,104 @@ it('refuses to run command-style fixes when cwd has no artisan', function () {
 
     @rmdir($bare);
 });
+
+it('passes shell metacharacters as literal command arguments', function () {
+    $project = makeCommandFixture($this->tempDir);
+    $marker = $this->tempDir.'/injected';
+    $arguments = [
+        'a value with spaces',
+        'single\' and double" quotes',
+        '; touch '.$marker,
+        '$(touch '.$marker.')',
+        '`touch '.$marker.'`',
+        'a | b & c > d < e * ? $HOME',
+        "line one\nline two",
+        '',
+    ];
+    $command = [PHP_BINARY, '-r', 'echo json_encode([getcwd(), array_slice($argv, 1)], JSON_THROW_ON_ERROR);', ...$arguments];
+
+    try {
+        $results = (new CodeFixer)->fix([
+            new Violation(
+                level: 'warning',
+                message: 'literal arguments',
+                file: $project.'/blade.blade.php',
+                line: 1,
+                isFixable: true,
+                fixCommand: $command,
+                fixCommandCwd: $project,
+            ),
+        ]);
+
+        expect($results['fixed'])->toBe(1);
+        expect($results['skipped'])->toBe(0);
+        expect($results['commands'][0]['status'])->toBe('ran');
+        expect(json_decode($results['commands'][0]['output'], true, flags: JSON_THROW_ON_ERROR))
+            ->toBe([realpath($project), $arguments]);
+        expect(file_exists($marker))->toBeFalse();
+    } finally {
+        if (file_exists($marker)) {
+            unlink($marker);
+        }
+        unlink($project.'/artisan');
+        rmdir($project);
+    }
+});
+
+it('keeps distinct argument boundaries when grouping commands', function () {
+    $project = makeCommandFixture($this->tempDir);
+    $violations = [];
+
+    foreach ([['a b', 'c'], ['a', 'b c']] as $arguments) {
+        $violations[] = new Violation(
+            level: 'warning',
+            message: 'distinct arguments',
+            file: $project.'/blade.blade.php',
+            line: 1,
+            isFixable: true,
+            fixCommand: [PHP_BINARY, '-r', 'echo json_encode(array_slice($argv, 1), JSON_THROW_ON_ERROR);', ...$arguments],
+            fixCommandCwd: $project,
+        );
+    }
+
+    try {
+        $results = (new CodeFixer)->fix($violations);
+
+        expect($results['fixed'])->toBe(2);
+        expect($results['commands'])->toHaveCount(2);
+        expect(array_column($results['commands'], 'output'))->toBe(['["a b","c"]', '["a","b c"]']);
+    } finally {
+        unlink($project.'/artisan');
+        rmdir($project);
+    }
+});
+
+it('rejects shell command strings', function () {
+    expect(fn () => new Violation(
+        level: 'warning',
+        message: 'legacy command',
+        file: 'example.blade.php',
+        line: 1,
+        fixCommand: 'php artisan example',
+    ))->toThrow(TypeError::class);
+});
+
+it('rejects malformed command argument arrays', function (array $command) {
+    expect(fn () => new Violation(
+        level: 'warning',
+        message: 'invalid command',
+        file: 'example.blade.php',
+        line: 1,
+        fixCommand: $command,
+    ))->toThrow(InvalidArgumentException::class);
+})->with([
+    'empty command' => [[]],
+    'empty executable' => [['']],
+    'associative arguments' => [['executable' => 'php']],
+    'non-string argument' => [['php', 123]],
+    'null byte in executable' => [["ph\0p"]],
+    'null byte in argument' => [['php', "a\0b"]],
+]);
 
 it('returns fix results by file', function () {
     $file = $this->tempDir.'/test.php';
