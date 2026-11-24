@@ -434,6 +434,7 @@ it('marks failed command-style fixes as skipped', function () {
     expect($results['skipped'])->toBe(1);
     expect($results['commands'])->toHaveCount(1);
     expect($results['commands'][0]['status'])->toBe('failed');
+    expect($results['commands'][0]['output'])->toBe('Process exited with code 7.');
 
     @unlink($project.'/artisan');
     @rmdir($project);

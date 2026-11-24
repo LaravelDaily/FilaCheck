@@ -281,7 +281,7 @@ class CodeFixer
                     'command' => $command,
                     'cwd' => $cwd,
                     'status' => 'failed',
-                    'output' => $output,
+                    'output' => $output === '' ? 'Process exited with code '.$process->getExitCode().'.' : $output,
                     'violations' => $count,
                 ];
                 $this->totalSkipped += $count;
