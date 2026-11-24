@@ -484,7 +484,7 @@ it('runs identical commands separately in distinct working directories', functio
             file: $project.'/blade.blade.php',
             line: 1,
             isFixable: true,
-            fixCommand: [PHP_BINARY, '-r', 'echo getcwd();'],
+            fixCommand: [PHP_BINARY, '-r', 'echo realpath(".");'],
             fixCommandCwd: $project,
         );
     }
@@ -548,7 +548,7 @@ it('passes shell metacharacters as literal command arguments', function () {
         "line one\nline two",
         '',
     ];
-    $command = [PHP_BINARY, '-r', 'echo json_encode([getcwd(), array_slice($argv, 1)], JSON_THROW_ON_ERROR);', ...$arguments];
+    $command = [PHP_BINARY, '-r', 'echo json_encode([realpath("."), array_slice($argv, 1)], JSON_THROW_ON_ERROR);', ...$arguments];
 
     try {
         $results = (new CodeFixer)->fix([
