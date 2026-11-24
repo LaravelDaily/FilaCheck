@@ -212,7 +212,11 @@ class CodeFixer
 
         foreach ($groups as $group) {
             $arguments = $group['command'];
-            $command = implode(' ', array_map('escapeshellarg', $arguments));
+            // Quote each argument for display. Process receives the original strings.
+            $command = implode(' ', array_map(
+                static fn (string $argument): string => '"'.addcslashes($argument, "\x00..\x1f\x7f\\\"").'"',
+                $arguments,
+            ));
             $cwd = $group['cwd'];
             $count = $group['count'];
 

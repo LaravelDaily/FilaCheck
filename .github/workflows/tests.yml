@@ -8,11 +8,12 @@ on:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: true
       matrix:
+        os: [ubuntu-latest]
         php: [8.2, 8.3, 8.4, 8.5]
         laravel: [12.*, 13.*]
         include:
@@ -20,11 +21,16 @@ jobs:
             testbench: ^10.0
           - laravel: 13.*
             testbench: ^11.0
+          - os: windows-latest
+            php: 8.4
+            laravel: 12.*
+            testbench: ^10.0
+            test_path: tests/Fixer/CodeFixerTest.php
         exclude:
           - laravel: 13.*
             php: 8.2
 
-    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }}
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }}${{ matrix.test_path && ' (Windows fixer)' || '' }}
 
     steps:
       - name: Checkout
@@ -43,4 +49,4 @@ jobs:
           composer update --prefer-dist --no-interaction
 
       - name: Run tests
-        run: vendor/bin/pest
+        run: php vendor/bin/pest ${{ matrix.test_path }}

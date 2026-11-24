@@ -340,6 +340,31 @@ it('does not execute command-style fixes during dry run', function () {
     @rmdir($project);
 });
 
+it('preserves literal arguments in the dry-run command preview', function () {
+    $project = makeCommandFixture($this->tempDir);
+    $longArgument = str_repeat('x', 32768);
+    $violation = new Violation(
+        level: 'warning',
+        message: 'preview a command',
+        file: $project.'/view.blade.php',
+        line: 1,
+        isFixable: true,
+        fixCommand: ['tool', '100%!', 'say "hello"', 'C:\Program Files', '', "first\nsecond", $longArgument],
+        fixCommandCwd: $project,
+    );
+
+    try {
+        $result = (new CodeFixer)->fix([$violation], dryRun: true);
+
+        expect($result['commands'][0]['status'])->toBe('would-run');
+        expect($result['commands'][0]['command'])
+            ->toBe('"tool" "100%!" "say \"hello\"" "C:\\\\Program Files" "" "first\nsecond" "'.$longArgument.'"');
+    } finally {
+        unlink($project.'/artisan');
+        rmdir($project);
+    }
+});
+
 it('dedupes identical command-style fixes across multiple violations', function () {
     $project = makeCommandFixture($this->tempDir);
     $counter = $this->tempDir.'/counter-'.uniqid();
