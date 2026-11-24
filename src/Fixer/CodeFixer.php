@@ -62,7 +62,7 @@ class CodeFixer
     }
 
     /**
-     * Split violations into command-style (run a shell command) and text-style
+     * Split violations into command-style (run an executable with arguments) and text-style
      * (byte-level replacement). A violation is command-style when it carries
      * a non-null fixCommand; otherwise it falls through to the text path so
      * all existing fixable rules keep behaving identically.
@@ -197,7 +197,7 @@ class CodeFixer
             }
 
             $cwd = $violation->fixCommandCwd ?? (getcwd() ?: '');
-            $key = $violation->fixCommand . '|' . $cwd;
+            $key = serialize([$violation->fixCommand, $cwd]);
 
             if (! isset($groups[$key])) {
                 $groups[$key] = [
@@ -211,7 +211,12 @@ class CodeFixer
         }
 
         foreach ($groups as $group) {
-            $command = $group['command'];
+            $arguments = $group['command'];
+            // Quote each argument for display. Process receives the original strings.
+            $command = implode(' ', array_map(
+                static fn (string $argument): string => '"'.addcslashes($argument, "\x00..\x1f\x7f\\\"").'"',
+                $arguments,
+            ));
             $cwd = $group['cwd'];
             $count = $group['count'];
 
@@ -241,9 +246,8 @@ class CodeFixer
                 continue;
             }
 
-            $process = Process::fromShellCommandline($command, $cwd, null, null, 60);
-
             try {
+                $process = new Process($arguments, $cwd, null, null, 60);
                 $process->run();
             } catch (\Throwable $e) {
                 $this->commands[] = [
@@ -277,7 +281,7 @@ class CodeFixer
                     'command' => $command,
                     'cwd' => $cwd,
                     'status' => 'failed',
-                    'output' => $output,
+                    'output' => $output === '' ? 'Process exited with code '.$process->getExitCode().'.' : $output,
                     'violations' => $count,
                 ];
                 $this->totalSkipped += $count;

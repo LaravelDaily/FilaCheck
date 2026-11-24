@@ -16,7 +16,10 @@ namespace Filacheck\Rules;
  * Command execution (run an external command from the project root, e.g. an
  * artisan generator that scaffolds files outside the offending file):
  * - isFixable: true
- * - fixCommand: Shell command to run (e.g. "php artisan make:filament-theme admin --no-interaction")
+ * - fixCommand: Non-empty list of strings: executable followed by literal arguments
+ *   (e.g. [PHP_BINARY, 'artisan', 'make:filament-theme', 'admin', '--no-interaction']).
+ *   Shell command strings are not supported. Do not invoke a shell or interpolate
+ *   untrusted values into executable code; argument arrays do not make that safe.
  * - fixCommandCwd: Absolute working directory to run it from (typically the
  *   scanner-supplied project basePath). CodeFixer refuses to execute when this
  *   directory does not contain an `artisan` file, as a guard against
