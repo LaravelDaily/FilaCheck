@@ -3,6 +3,38 @@
 use Filacheck\Fixer\CodeFixer;
 use Filacheck\Support\Violation;
 
+// Override only the fixer namespace operations so failure paths remain deterministic.
+eval(<<<'PHP'
+namespace Filacheck\Fixer;
+function tempnam($directory, $prefix) {
+    if (($GLOBALS['backupFailure'] ?? '') === 'create') return false;
+    if (($GLOBALS['backupFailure'] ?? '') === 'fallback') return $GLOBALS['backupTemporaryFile'] = \tempnam(sys_get_temp_dir(), $prefix);
+    return $GLOBALS['backupTemporaryFile'] = \tempnam($directory, $prefix);
+}
+function fwrite($handle, $data) {
+    if (($GLOBALS['backupFailure'] ?? '') === 'write') {
+        if (! ($GLOBALS['backupPartialWritten'] ?? false)) {
+            $GLOBALS['backupPartialWritten'] = true;
+            return \fwrite($handle, substr($data, 0, 1));
+        }
+        return false;
+    }
+    return \fwrite($handle, $data);
+}
+function fclose($handle) {
+    $result = \fclose($handle);
+    return ($GLOBALS['backupFailure'] ?? '') === 'close' ? false : $result;
+}
+function link($source, $destination) {
+    if (($GLOBALS['backupFailure'] ?? '') === 'publish') return false;
+    return \link($source, $destination);
+}
+function unlink($path) {
+    if (($GLOBALS['backupFailure'] ?? '') === 'cleanup') return false;
+    return \unlink($path);
+}
+PHP);
+
 beforeEach(function () {
     $this->tempDir = sys_get_temp_dir().'/filacheck-fixer-test-'.uniqid();
     mkdir($this->tempDir, 0755, true);
@@ -126,8 +158,110 @@ it('creates backup files when requested', function () {
     $fixer->fix($violations, createBackup: true);
 
     expect(file_exists($file.'.bak'))->toBeTrue();
+    expect(file_exists($GLOBALS['backupTemporaryFile']))->toBeFalse();
+    unset($GLOBALS['backupTemporaryFile']);
     expect(file_get_contents($file.'.bak'))->toBe($content);
     expect(file_get_contents($file))->toBe('<?php $input->live();');
+});
+
+
+it('preserves occupied backups and continues fixing another file', function () {
+    $blocked = $this->tempDir.'/blocked.php';
+    $safe = $this->tempDir.'/safe.php';
+    $content = '<?php $input->reactive();';
+    file_put_contents($blocked, $content);
+    file_put_contents($blocked.'.bak', 'existing backup');
+    file_put_contents($safe, $content);
+    $violation = fn (string $file) => new Violation(level: 'warning', message: 'Fixable', file: $file, line: 1, isFixable: true, startPos: 14, endPos: 22, replacement: 'live');
+    $manual = new Violation(level: 'warning', message: 'Manual', file: $blocked, line: 1, isFixable: false);
+
+    $results = (new CodeFixer)->fix([$violation($blocked), $manual, $violation($safe)], createBackup: true);
+
+    expect(file_get_contents($blocked))->toBe($content)
+        ->and(file_get_contents($blocked.'.bak'))->toBe('existing backup')
+        ->and(file_get_contents($safe.'.bak'))->toBe($content)
+        ->and(file_get_contents($safe))->toBe('<?php $input->live();')
+        ->and($results['fixed'])->toBe(1)
+        ->and($results['skipped'])->toBe(2)
+        ->and($results['byFile'][$blocked])->toMatchArray(['fixed' => 0, 'skipped' => 2, 'backupFailed' => true]);
+});
+
+it('does not follow live or dangling backup symlinks', function (bool $dangling) {
+    $file = $this->tempDir.'/test.php';
+    $target = $this->tempDir.'/target';
+    $content = '<?php $input->reactive();';
+    file_put_contents($file, $content);
+    if (! $dangling) {
+        file_put_contents($target, 'target contents');
+    }
+    set_error_handler(static fn (): bool => true);
+    try {
+        $linked = symlink($target, $file.'.bak');
+    } finally {
+        restore_error_handler();
+    }
+    if (! $linked) {
+        $this->markTestSkipped('Symlinks are unavailable on this platform.');
+    }
+    $violation = new Violation(level: 'warning', message: 'Fixable', file: $file, line: 1, isFixable: true, startPos: 14, endPos: 22, replacement: 'live');
+
+    $results = (new CodeFixer)->fix([$violation], createBackup: true);
+
+    expect(is_link($file.'.bak'))->toBeTrue()
+        ->and(file_get_contents($file))->toBe($content)
+        ->and(file_exists($target))->toBe(! $dangling)
+        ->and($results['skipped'])->toBe(1)
+        ->and($results['byFile'][$file]['backupFailed'])->toBeTrue();
+    if (! $dangling) {
+        expect(file_get_contents($target))->toBe('target contents');
+    }
+})->with([false, true]);
+
+it('leaves the source unchanged when a backup operation fails', function (string $failure) {
+    $file = $this->tempDir.'/test.php';
+    $content = '<?php $input->reactive();';
+    file_put_contents($file, $content);
+    $violation = new Violation(level: 'warning', message: 'Fixable', file: $file, line: 1, isFixable: true, startPos: 14, endPos: 22, replacement: 'live');
+    $GLOBALS['backupFailure'] = $failure;
+    $GLOBALS['backupPartialWritten'] = false;
+    $GLOBALS['backupTemporaryFile'] = false;
+
+    try {
+        $results = (new CodeFixer)->fix([$violation], createBackup: true);
+    } finally {
+        unset($GLOBALS['backupFailure'], $GLOBALS['backupPartialWritten']);
+    }
+
+    expect(file_get_contents($file))->toBe($content)
+        ->and($results['fixed'])->toBe(0)
+        ->and($results['skipped'])->toBe(1)
+        ->and($results['byFile'][$file]['backupFailed'])->toBeTrue();
+    $temporaryFile = $GLOBALS['backupTemporaryFile'];
+    unset($GLOBALS['backupTemporaryFile']);
+    if ($failure === 'cleanup') {
+        expect($temporaryFile)->toBeString()
+            ->and(file_exists($temporaryFile))->toBeTrue()
+            ->and(file_get_contents($file.'.bak'))->toBe($content);
+        unlink($temporaryFile);
+    } else {
+        expect($temporaryFile === false || ! file_exists($temporaryFile))->toBeTrue()
+            ->and(file_exists($file.'.bak'))->toBeFalse();
+    }
+})->with(['create', 'fallback', 'write', 'close', 'publish', 'cleanup']);
+
+it('reports backup failures through the actual CLI', function () {
+    $file = $this->tempDir.'/test.php';
+    $content = '<?php $input->reactive();';
+    file_put_contents($file, $content);
+    file_put_contents($file.'.bak', 'existing');
+    $process = new \Symfony\Component\Process\Process([PHP_BINARY, dirname(__DIR__, 2).'/bin/filacheck', $file, '--fix', '--backup'], $this->tempDir);
+    $process->run();
+
+    expect($process->getExitCode())->toBe(1)
+        ->and($process->getOutput())->toMatch('/Backup could not be created: [^\r\n]*test\.php/')
+        ->and($process->getOutput())->not->toContain('Line 1: The reactive() method is deprecated. (fixed)')
+        ->and(file_get_contents($file))->toBe($content)
+        ->and(file_get_contents($file.'.bak'))->toBe('existing');
 });
 
 it('does not create backup files by default', function () {

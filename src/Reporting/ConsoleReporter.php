@@ -286,7 +286,7 @@ class ConsoleReporter implements ReporterInterface
                 $this->command->getOutput()->write('<fg=green>.</>');
                 $passCount++;
             } else {
-                $fixableCount = count(array_filter($ruleViolations, fn ($v) => $v->isFixable));
+                $fixableCount = count(array_filter($ruleViolations, fn ($v) => $v->isFixable && ! ($fixResults['byFile'][$v->file]['backupFailed'] ?? false)));
                 $unfixableCount = count($ruleViolations) - $fixableCount;
 
                 if ($fixableCount > 0 && $unfixableCount === 0) {
@@ -317,7 +317,7 @@ class ConsoleReporter implements ReporterInterface
 
         if (count($allFailedRules) > 0) {
             foreach ($allFailedRules as $ruleName => $data) {
-                $this->reportFailedRuleWithFixInfo($ruleName, $data['rule'], $data['violations']);
+                $this->reportFailedRuleWithFixInfo($ruleName, $data['rule'], $data['violations'], $fixResults['byFile']);
             }
         }
 
@@ -327,9 +327,9 @@ class ConsoleReporter implements ReporterInterface
     /**
      * @param  Violation[]  $violations
      */
-    private function reportFailedRuleWithFixInfo(string $ruleName, Rule $rule, array $violations): void
+    private function reportFailedRuleWithFixInfo(string $ruleName, Rule $rule, array $violations, array $byFile): void
     {
-        $fixableCount = count(array_filter($violations, fn ($v) => $v->isFixable));
+        $fixableCount = count(array_filter($violations, fn ($v) => $v->isFixable && ! ($byFile[$v->file]['backupFailed'] ?? false)));
         $unfixableCount = count($violations) - $fixableCount;
         $categoryLabel = $rule->category()->label();
 
@@ -341,7 +341,7 @@ class ConsoleReporter implements ReporterInterface
             $status = ' <fg=yellow>(partial fix)</>';
         } else {
             $icon = '<fg=red>✗</>';
-            $status = ' <fg=red>(not fixable)</>';
+            $status = ' <fg=red>(not fixed)</>';
         }
 
         $this->command->line("{$icon} <options=bold>{$ruleName}</> <fg=gray>({$categoryLabel})</>{$status}");
@@ -355,7 +355,9 @@ class ConsoleReporter implements ReporterInterface
             $this->command->line("  <fg=gray>{$file}</>");
 
             foreach ($fileViolations as $violation) {
-                if ($violation->isFixable) {
+                if ($violation->isFixable && ($byFile[$file]['backupFailed'] ?? false)) {
+                    $this->command->line("    <fg=yellow>Line {$violation->line}:</> {$violation->message} <fg=yellow>(skipped)</>");
+                } elseif ($violation->isFixable) {
                     $this->command->line(
                         "    <fg=cyan>Line {$violation->line}:</> {$violation->message} <fg=cyan>(fixed)</>"
                     );
@@ -395,6 +397,12 @@ class ConsoleReporter implements ReporterInterface
 
         if ($fixed > 0) {
             $this->command->line("<fg=cyan;options=bold>✓ Fixed {$fixed} issue(s)</> in {$filesModified} file(s)");
+        }
+
+        foreach ($fixResults['byFile'] as $file => $result) {
+            if ($result['backupFailed'] ?? false) {
+                $this->command->line("<fg=yellow>Backup could not be created: {$file}</>");
+            }
         }
 
         if ($skipped > 0) {

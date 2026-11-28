@@ -187,7 +187,7 @@ class StandaloneReporter implements ReporterInterface
                 $this->output->write('<fg=green>.</>');
                 $passCount++;
             } else {
-                $fixableCount = count(array_filter($ruleViolations, fn ($v) => $v->isFixable));
+                $fixableCount = count(array_filter($ruleViolations, fn ($v) => $v->isFixable && ! ($fixResults['byFile'][$v->file]['backupFailed'] ?? false)));
                 $unfixableCount = count($ruleViolations) - $fixableCount;
 
                 if ($fixableCount > 0 && $unfixableCount === 0) {
@@ -219,7 +219,7 @@ class StandaloneReporter implements ReporterInterface
 
         if (count($allFailedRules) > 0) {
             foreach ($allFailedRules as $ruleName => $data) {
-                $this->reportFailedRuleWithFixInfo($ruleName, $data['rule'], $data['violations']);
+                $this->reportFailedRuleWithFixInfo($ruleName, $data['rule'], $data['violations'], $fixResults['byFile']);
             }
         }
 
@@ -229,9 +229,9 @@ class StandaloneReporter implements ReporterInterface
     /**
      * @param  Violation[]  $violations
      */
-    private function reportFailedRuleWithFixInfo(string $ruleName, Rule $rule, array $violations): void
+    private function reportFailedRuleWithFixInfo(string $ruleName, Rule $rule, array $violations, array $byFile): void
     {
-        $fixableCount = count(array_filter($violations, fn ($v) => $v->isFixable));
+        $fixableCount = count(array_filter($violations, fn ($v) => $v->isFixable && ! ($byFile[$v->file]['backupFailed'] ?? false)));
         $unfixableCount = count($violations) - $fixableCount;
         $categoryLabel = $rule->category()->label();
 
@@ -243,7 +243,7 @@ class StandaloneReporter implements ReporterInterface
             $status = $this->isDryRun ? ' <fg=yellow>(partial proposed)</>' : ' <fg=yellow>(partial fix)</>';
         } else {
             $icon = '<fg=red>✗</>';
-            $status = ' <fg=red>(not fixable)</>';
+            $status = ' <fg=red>(not fixed)</>';
         }
 
         $this->output->writeln("{$icon} <options=bold>{$ruleName}</> <fg=gray>({$categoryLabel})</>{$status}");
@@ -267,7 +267,9 @@ class StandaloneReporter implements ReporterInterface
             $this->output->writeln("  <fg=gray>{$file}</>");
 
             foreach ($fileViolations as $violation) {
-                if ($violation->isFixable) {
+                if ($violation->isFixable && ($byFile[$file]['backupFailed'] ?? false)) {
+                    $this->output->writeln("    <fg=yellow>Line {$violation->line}:</> {$violation->message} <fg=yellow>(skipped)</>");
+                } elseif ($violation->isFixable) {
                     $this->output->writeln(
                         $this->isDryRun
                             ? "    <fg=cyan>Line {$violation->line}:</> {$violation->message} <fg=cyan>(proposed)</>"
@@ -367,6 +369,12 @@ class StandaloneReporter implements ReporterInterface
                 $this->output->writeln("<fg=cyan;options=bold>✓ Proposed {$fixed} fix(es)</> in {$filesModified} file(s)");
             } else {
                 $this->output->writeln("<fg=cyan;options=bold>✓ Fixed {$fixed} issue(s)</> in {$filesModified} file(s)");
+            }
+        }
+
+        foreach ($fixResults['byFile'] as $file => $result) {
+            if ($result['backupFailed'] ?? false) {
+                $this->output->writeln("<fg=yellow>Backup could not be created: {$file}</>");
             }
         }
 

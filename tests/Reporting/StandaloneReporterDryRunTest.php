@@ -459,3 +459,19 @@ it('keeps each proposed diff with its own violation when violations are reported
             ->and($line99DiffPosition)->toBeLessThan($line100MessagePosition);
     });
 });
+
+
+it('reports a backup failure without calling the affected fix successful', function () {
+    $file = '/example/blocked.php';
+    $rule = createRule('backup-failure');
+    $violation = new Violation(level: 'warning', message: 'Fixable issue.', file: $file, line: 1, rule: $rule->name(), isFixable: true);
+    $output = new BufferedOutput;
+    (new StandaloneReporter($output))->reportWithFixes([$rule], [$violation], [
+        'fixed' => 0,
+        'skipped' => 1,
+        'byFile' => [$file => ['fixed' => 0, 'skipped' => 1, 'backupFailed' => true]],
+    ]);
+
+    expect($output->fetch())->toContain('Backup could not be created: '.$file, 'Fixable issue. (skipped)')
+        ->not->toContain('(fixed)');
+});
