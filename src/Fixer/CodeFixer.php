@@ -7,7 +7,7 @@ use Symfony\Component\Process\Process;
 
 class CodeFixer
 {
-    /** @var array<string, array{fixed: int, skipped: int}> */
+    /** @var array<string, array{fixed: int, skipped: int, backupFailed?: bool}> */
     private array $results = [];
 
     /** @var array<string, array<int, array{line: int, column: int, from: string, to: string}>> */
@@ -27,7 +27,7 @@ class CodeFixer
      * @return array{
      *     fixed: int,
      *     skipped: int,
-     *     byFile: array<string, array{fixed: int, skipped: int}>,
+     *     byFile: array<string, array{fixed: int, skipped: int, backupFailed?: bool}>,
      *     dryRun: bool,
      *     previews: array<string, array<int, array{line: int, column: int, from: string, to: string}>>,
      *     commands: array<int, array{command: string, cwd: string, status: string, output: string, violations: int}>
@@ -129,6 +129,14 @@ class CodeFixer
             return;
         }
 
+        if ($createBackup && ! $dryRun && ! $this->createBackup($file, $content)) {
+            $skipped += count($fixableViolations);
+            $this->totalSkipped += count($fixableViolations);
+            $this->results[$file] = ['fixed' => 0, 'skipped' => $skipped, 'backupFailed' => true];
+
+            return;
+        }
+
         // Sort by position in reverse order to avoid offset shifts
         usort($fixableViolations, fn (Violation $a, Violation $b) => $b->startPos <=> $a->startPos);
 
@@ -156,10 +164,6 @@ class CodeFixer
             );
         }
 
-        if ($createBackup && ! $dryRun) {
-            copy($file, $file . '.bak');
-        }
-
         if (! $dryRun) {
             file_put_contents($file, $content);
         }
@@ -167,6 +171,54 @@ class CodeFixer
         $fixed = count($fixableViolations);
         $this->totalFixed += $fixed;
         $this->results[$file] = ['fixed' => $fixed, 'skipped' => $skipped];
+    }
+
+    private function createBackup(string $file, string $content): bool
+    {
+        // Filesystem failures are reported through the fix result instead of PHP warnings.
+        set_error_handler(static fn (): bool => true);
+
+        try {
+            $directory = dirname($file);
+            $temporary = tempnam($directory, '.filacheck-');
+            if ($temporary === false) {
+                return false;
+            }
+
+            $success = realpath(dirname($temporary)) === realpath($directory);
+            $directoryStat = stat($directory);
+            $temporaryStat = stat($temporary);
+            $success = $success && $directoryStat !== false && $temporaryStat !== false
+                && $directoryStat['dev'] === $temporaryStat['dev'];
+
+            if ($success) {
+                $handle = fopen($temporary, 'wb');
+                $success = $handle !== false;
+                if ($handle !== false) {
+                    $offset = 0;
+                    $length = strlen($content);
+                    while ($offset < $length) {
+                        $written = fwrite($handle, substr($content, $offset));
+                        if ($written === false || $written === 0) {
+                            $success = false;
+                            break;
+                        }
+                        $offset += $written;
+                    }
+                    if (! fclose($handle)) {
+                        $success = false;
+                    }
+                }
+            }
+
+            if ($success && ! link($temporary, $file . '.bak')) {
+                $success = false;
+            }
+
+            return unlink($temporary) && $success;
+        } finally {
+            restore_error_handler();
+        }
     }
 
     /**

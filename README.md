@@ -57,6 +57,8 @@ vendor/bin/filacheck --dry-run
 vendor/bin/filacheck --fix --backup
 ```
 
+If a backup path already exists, the corresponding source file is left unchanged. Move or remove the existing backup before retrying. Backup creation also fails if the filesystem does not support hard links.
+
 > [!WARNING] 
 > The auto-fix feature is in early stages. Always ensure your code is committed to version control (e.g., Git/GitHub) before running `--fix` so you can easily review and revert changes if needed.
 
